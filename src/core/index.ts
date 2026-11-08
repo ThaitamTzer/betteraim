@@ -1,11 +1,39 @@
 // Public surface of the headless core. The render and UI layers import from here only.
 export { aimDelta, angleBetween, degreesPerCount, directionOf, offsetAim, verticalFovDeg, wrapDeg } from './aim'
-export { aggregateRuns, byDay, bySession, groupRuns, loadAnalysed } from './aggregate'
+export { aggregateRuns, byDay, bySession, groupRuns, loadAnalysed, loadAnalysedRuns } from './aggregate'
 export type { AnalysedRun, Aggregate, ClickingMetrics, Metrics, RunGroup, ScenarioAggregate, TrackingMetrics } from './aggregate'
 export { analyseRun, leadOf } from './analysis'
 export type { AimMovement, ClickingAnalysis, Lead, Outcome, RunAnalysis, RunData, TrackingAnalysis } from './analysis'
-export { askJson, buildAdvicePayload, CoachError, practiceAdvice, schemaError } from './coach'
-export type { AdvicePayload, CoachErrorKind, CoachProvider, CoachRequest, JsonSchema } from './coach'
+export {
+  askJson,
+  buildAdvicePayload,
+  buildSensitivityPayload,
+  cachedRecommendation,
+  CoachError,
+  createChoiceCache,
+  describePlayerContext,
+  parsePlayerContext,
+  PLAYER_CONTEXT,
+  PLAYER_CONTEXT_FIELDS,
+  practiceAdvice,
+  recommendSensitivity,
+  schemaError,
+  snapshotKey,
+} from './coach'
+export type {
+  AdvicePayload,
+  ChoiceCache,
+  CoachChoice,
+  CoachErrorKind,
+  CoachProvider,
+  CoachRequest,
+  JsonSchema,
+  PlayerContext,
+  Recommendation,
+  RecommendInput,
+  SensitivityPayload,
+  SnapshotInput,
+} from './coach'
 export { decodeInput, decodeTargetEvents, encodeInput, encodeTargetEvents, fromBase64, toBase64 } from './codec'
 export { EXPORT_FORMAT, EXPORT_VERSION, exportData, ImportError, importData, parseExport } from './exchange'
 export { coarseLevels, ENOUGH_HALF_WIDTH, fitFinder, INTERVAL_LEVEL, planSession, recommend } from './finder'

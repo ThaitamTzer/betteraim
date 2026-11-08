@@ -17,26 +17,45 @@ export interface AnalysedRun {
 /**
  * Loads the Runs the filter selects and analyses each from its stored input (raw data is the source of truth, so nothing
  * derived is ever stored).
- * shortcut: an Analysis costs about 100 ms per Run (a 30 s Run at a 1 kHz mouse), so a caller that loads often passes a `cache`
+ * shortcut: an Analysis costs 15 to 70 ms per Run (a 30 s Run at a 1 kHz mouse; Tracking Runs replay every ms, so they cost most), so a caller that loads often passes a `cache`
  * (Run id to Analysis, filled here; Runs never change under an id, an import of the same id carries the same data). Nothing
  * is persisted: the first History after a page load pays for every Run. Persist the Analysis next to the Run, or speed up
  * `analyseRun`, when that gets slow.
  */
-export async function loadAnalysed(store: RunStore, filter?: RunFilter, cache = new Map<string, RunAnalysis>()): Promise<AnalysedRun[]> {
-  const items: AnalysedRun[] = []
-  for (const run of await store.list(filter)) {
+export const loadAnalysed = async (store: RunStore, filter?: RunFilter, cache = new Map<string, RunAnalysis>()): Promise<AnalysedRun[]> =>
+  loadAnalysedRuns(store, await store.list(filter), cache)
+
+/**
+ * `loadAnalysed` for Runs already picked (summaries from `store.list`, or the Runs a Finder fit used): the AI Coach needs only those, not
+ * every Run of the Game Profile. `onProgress(done, total)` is called after each Run and awaited, so a screen can show progress and give the
+ * browser a turn between Runs (the core has no timer to do it with).
+ */
+export async function loadAnalysedRuns(
+  store: RunStore,
+  runs: readonly RunSummary[],
+  cache = new Map<string, RunAnalysis>(),
+  onProgress?: (done: number, total: number) => void | Promise<void>,
+): Promise<AnalysedRun[]> {
+  const analyse = async (run: RunSummary): Promise<AnalysedRun | undefined> => {
     let analysis = cache.get(run.id)
     if (!analysis) {
       const record = await store.get(run.id)
-      if (!record) continue // deleted between the list and the get
+      if (!record) return undefined // deleted between the list and the get
       try {
         analysis = analyseRun(record)
       } catch {
-        continue // A Run of a Scenario this build does not know (imported from a newer one): it cannot be analysed, so it is not shown.
+        return undefined // A Run of a Scenario this build does not know (imported from a newer one): it cannot be analysed, so it is not shown.
       }
       cache.set(run.id, analysis)
     }
-    items.push({ run, analysis })
+    return { run, analysis }
+  }
+  const items: AnalysedRun[] = []
+  let done = 0
+  for (const run of runs) {
+    const item = await analyse(run)
+    if (item) items.push(item)
+    await onProgress?.(++done, runs.length)
   }
   return items
 }

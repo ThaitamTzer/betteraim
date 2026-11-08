@@ -81,12 +81,20 @@ export interface FinderFit {
     pairs: number
     /** Runs in the fit. */
     runs: number
+    /** The Runs in the fit, so whoever reads the Runs after the fit (the AI Coach's payload and snapshot key, ticket #15) uses exactly its selection: Reset, Warm-up Runs and incomplete pairs already out. */
+    used: readonly RunSummary[]
     excluded: { warmup: number; practice: number; filtered: number; incompletePair: number }
   }
 }
 
-/** The Sensitivity to recommend. This is the seam of ticket #15: the AI Coach's choice inside `fit.interval` goes here; today it is the Curve Peak. */
-export const recommend = (fit: FinderFit): Cm360 | null => fit.peak
+/**
+ * The Sensitivity to recommend: the AI Coach's choice (`coach.recommended`, see `recommendSensitivity`) when it came from the AI Coach
+ * and lies inside `fit.interval`, else the Curve Peak (no AI Coach connected, it failed, or there is no interval to choose within).
+ */
+export const recommend = (fit: FinderFit, coach?: { source: 'coach' | 'curve-peak'; recommended: Cm360 | null } | null): Cm360 | null =>
+  coach?.source === 'coach' && coach.recommended !== null && fit.interval && coach.recommended >= fit.interval.low && coach.recommended <= fit.interval.high
+    ? coach.recommended
+    : fit.peak
 
 interface Row {
   sensitivity: Cm360
@@ -118,7 +126,7 @@ interface Pair {
 const keyOf = (run: RunSummary): string => `${run.sessionId}\u0000${run.scenario}`
 
 /** FNV-1a over the fitted Runs in id order: the seed of the bootstrap, so the same data always gives the same interval. */
-function hashRuns(rows: readonly { id: string; sensitivity: number; score: number }[]): number {
+export function hashRuns(rows: readonly { id: string; sensitivity: number; score: number }[]): number {
   let h = 2166136261
   for (const r of [...rows].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))) {
     for (const ch of `${r.id}|${r.sensitivity}|${r.score};`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619)
@@ -260,7 +268,8 @@ export function fitFinder(runs: readonly RunSummary[], options: FitOptions): Fin
 
   const used = kept.flat()
   const sessions = new Set(used.map((r) => r.sessionId)).size
-  const counts = { sessions, pairs: kept.length, runs: used.length, excluded }
+  const byId = (x: RunSummary, y: RunSummary): number => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0)
+  const counts = { sessions, pairs: kept.length, runs: used.length, used: [...used].sort(byId), excluded } // id order: the fit does not depend on the order the Runs came in
   const lns = used.map((r) => Math.log(r.sensitivity))
   const lo = Math.min(...lns)
   const hi = Math.max(...lns)

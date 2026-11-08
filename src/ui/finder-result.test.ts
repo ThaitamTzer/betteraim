@@ -15,6 +15,23 @@ describe('the Finder result text', () => {
     expect(recommended).toEqual({ cm360: fit.peak, gameSensitivity: expect.closeTo(0.4, 9), eDpi: expect.closeTo(320, 6) })
   })
 
+  it('gives the AI Coach choice instead of the Curve Peak when it is inside the interval: Game Sensitivity and eDPI by formula from its cm/360', () => {
+    const fit = { ...fitOf(8, 40.8), interval: { low: 36, high: 46, halfWidth: 0.12 } }
+    // Valorant 0.4 at 800 DPI is about 40.8 cm/360 and 320 eDPI (the Converter's reference point)
+    const view = resultView(fit, 'valorant', 800, { source: 'coach', recommended: 40.8 })
+    expect(view.source).toBe('coach')
+    expect(view.recommended).toEqual({ cm360: 40.8, gameSensitivity: expect.closeTo(0.4, 2), eDpi: expect.closeTo(320, 0) })
+  })
+
+  it('keeps the Curve Peak when the AI Coach choice is outside the interval or the AI Coach did not choose', () => {
+    const fit = { ...fitOf(8, 40.8), interval: { low: 36, high: 46, halfWidth: 0.12 } }
+    for (const coach of [{ source: 'coach' as const, recommended: fit.interval!.high * 1.2 }, { source: 'curve-peak' as const, recommended: 40.8 }, null, undefined]) {
+      const view = resultView(fit, 'valorant', 800, coach)
+      expect(view.source).toBe('curve-peak')
+      expect(view.recommended!.cm360).toBe(fit.peak)
+    }
+  })
+
   it('says there is enough data once the interval is narrower than +-10%, and shows progress before', () => {
     const late = fitOf(30)
     expect(resultView(late, 'valorant', 800)).toMatchObject({ enough: true, message: expect.stringMatching(/^Enough data.*within ±\d+\.\d%/) })
