@@ -7,7 +7,7 @@ export type CoachProviderId = 'anthropic' | 'openai'
 
 /**
  * How the player connected the AI Coach. It holds API keys, so it lives under its own localStorage key and is never part of
- * the Run export file (which only reads the RunStore), of `Preferences`, or of anything logged. A key is sent to the
+ * the export file (which reads the RunStore and the player's setup, Preferences and Player Context, never this key), of `Preferences`, or of anything logged. A key is sent to the
  * provider the player chose and nowhere else. Both providers keep their own fields so switching does not lose a key.
  */
 export interface CoachSettings {
