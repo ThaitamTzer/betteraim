@@ -3,6 +3,7 @@ import { createRun, RUN_DURATION_MS } from '../../core'
 import type { Run, RunEnv, RunRecord } from '../../core'
 import { captureInput, lockPointer, rawInputLikelySupported } from '../../input/pointer'
 import { createScene } from '../../render/scene'
+import { saveRun } from '../../storage/runs'
 import type { ScreenProps } from '../routes'
 
 interface Live {
@@ -51,6 +52,7 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
       document.exitPointerLock()
       const { route: r, go: navigate } = latest.current
       const record: RunRecord = { ...r.params, ...r.meta, id: l.id, startedAt: l.startedAt, env: l.env, ...l.run.result() }
+      saveRun(record)
       navigate(r.next(record))
     }
 
