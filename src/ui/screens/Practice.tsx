@@ -1,16 +1,16 @@
 import { scenarios } from '../../core'
 import type { ScenarioId } from '../../core'
-import { CUSTOM_PROFILE_ID, DEFAULT_FOV, newSeed } from '../defaults'
+import { newSeed } from '../defaults'
 import type { Route, ScreenProps } from '../routes'
 
 export function Practice({ route, go }: ScreenProps<'practice'>) {
-  const { sensitivity, dpi } = route
+  const { sensitivity, dpi, fov, gameProfileId } = route
 
   // A fresh seed per Run; "Play again" on the result screen calls this again. Practice Runs have no Session.
   const runRoute = (scenario: ScenarioId): Extract<Route, { name: 'run' }> => ({
     name: 'run',
-    params: { scenario, seed: newSeed(), sensitivity, dpi, fov: DEFAULT_FOV },
-    meta: { gameProfileId: CUSTOM_PROFILE_ID, mode: 'practice', warmup: false },
+    params: { scenario, seed: newSeed(), sensitivity, dpi, fov },
+    meta: { gameProfileId, mode: 'practice', warmup: false },
     next: (record) => ({ name: 'result', record, again: runRoute(scenario) }),
   })
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { degreesPerCount } from '../../core'
 import { rawInputLikelySupported } from '../../input/pointer'
+import { CUSTOM_PROFILE_ID, DEFAULT_FOV } from '../defaults'
 import type { ScreenProps } from '../routes'
 
 export function Home({ go }: ScreenProps<'home'>) {
@@ -28,7 +29,7 @@ export function Home({ go }: ScreenProps<'home'>) {
         className="setup"
         onSubmit={(e) => {
           e.preventDefault()
-          if (valid) go({ name: 'practice', sensitivity, dpi: mouseDpi })
+          if (valid) go({ name: 'practice', sensitivity, dpi: mouseDpi, fov: DEFAULT_FOV, gameProfileId: CUSTOM_PROFILE_ID })
         }}
       >
         <label>
