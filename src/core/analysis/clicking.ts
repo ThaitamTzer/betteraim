@@ -79,8 +79,9 @@ export function analyseClicking(run: RunData): ClickingAnalysis {
     const pathDeviation = travelled === 0 ? 0 : deviationSum / travelled
     // Length of the smoothed path (speed is deg/s per ms), so one-count jitter does not add distance.
     const pathLength = travelled / 1000
-    // Where the crosshair is once the Primary Submovement's last ms has passed (still at the start if it never moved).
-    const last = samples.findLastIndex((s) => primaryEnd !== null && Math.floor(s.ms) <= primaryEnd)
+    // Where the crosshair is once the Primary Submovement's last ms has passed. With no velocity peak there is no
+    // ballistic push to judge (a creep, or no movement at all), so the hit position stands in for it: on-target.
+    const last = primaryEnd === null ? samples.length - 1 : samples.findLastIndex((s) => Math.floor(s.ms) <= primaryEnd)
     const primaryEndAlong = samples[Math.max(0, last)]?.along ?? 0
     const idealDistance = angleBetween(e.crosshair, e)
     let outcome: Outcome = 'on-target'

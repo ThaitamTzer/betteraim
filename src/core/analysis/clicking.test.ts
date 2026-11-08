@@ -113,6 +113,15 @@ describe.each(setups)('Mouse speed at $sensitivity cm/360, $dpi DPI', (setup) =>
   })
 })
 
+describe('an Aim Movement too slow to have any velocity peak', () => {
+  it('has no Primary Submovement to misjudge: it is on-target because it hit', () => {
+    // 25 s to cover 10 to 60 degrees is under 5 degrees per second all the way
+    const { analysis } = analyse(lineBot({ burstMs: 25_000 }))
+    expect(analysis.movementCount).toBe(1)
+    expect(analysis.movements[0]).toMatchObject({ velocityPeaks: 0, outcome: 'on-target' })
+  })
+})
+
 describe('Aim Movements', () => {
   it('run from target appearance to the hit that kills it, and the target still alive at the end is not one', () => {
     const { record, analysis } = analyse(aimBot())
