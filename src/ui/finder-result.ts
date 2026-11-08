@@ -13,7 +13,8 @@ export interface ResultView {
 }
 
 const sessions = (n: number): string => `${n} Session${n === 1 ? '' : 's'}`
-const percent = (halfWidth: number): string => `${Math.round(halfWidth * 100)}%`
+// One decimal, rounded down: 0.0996 is "9.9%", never "10%" next to a claim that the interval is narrower than 10%.
+const percent = (halfWidth: number): string => `${(Math.floor(halfWidth * 1000) / 10).toFixed(1)}%`
 
 /** What the result screen says about a fit, for one Game Profile at the player's DPI. Pure: no Run's Sensitivity but the curve's own is in it. */
 export function resultView(fit: FinderFit, gameProfileId: GameProfileId, dpi: number): ResultView {
@@ -22,7 +23,7 @@ export function resultView(fit: FinderFit, gameProfileId: GameProfileId, dpi: nu
   const gameSensitivity = cm360 === null ? null : gameSensitivityFor(gameProfileId, cm360, dpi)
   const recommended = cm360 === null || gameSensitivity === null ? null : { cm360, gameSensitivity, eDpi: eDpi(gameSensitivity, dpi) }
   const { interval, counts } = fit
-  const limit = percent(ENOUGH_HALF_WIDTH)
+  const limit = `${Math.round(ENOUGH_HALF_WIDTH * 100)}%`
   const message = ((): string => {
     if (fit.reason === 'no-interior-peak') {
       const side = fit.curve.score.at(-1)! >= fit.curve.score[0]! ? 'higher' : 'lower'

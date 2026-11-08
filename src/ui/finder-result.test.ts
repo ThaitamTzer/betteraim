@@ -17,11 +17,18 @@ describe('the Finder result text', () => {
 
   it('says there is enough data once the interval is narrower than +-10%, and shows progress before', () => {
     const late = fitOf(30)
-    expect(resultView(late, 'valorant', 800)).toMatchObject({ enough: true, message: expect.stringMatching(/^Enough data.*within ±\d+%/) })
+    expect(resultView(late, 'valorant', 800)).toMatchObject({ enough: true, message: expect.stringMatching(/^Enough data.*within ±\d+\.\d%/) })
     const early = resultView(fitOf(4), 'valorant', 800)
     expect(early.enough).toBe(false)
-    expect(early.message).toMatch(/^4 Sessions so far\. The interval is ±\d+% wide/)
+    expect(early.message).toMatch(/^4 Sessions so far\. The interval is ±\d+\.\d% wide/)
     expect(early.message).not.toMatch(/Enough data/)
+  })
+
+  it('never rounds an interval onto the +-10% line it is judged by', () => {
+    const base = fitOf(8)
+    const withHalfWidth = (halfWidth: number, enoughData: boolean) => resultView({ ...base, enoughData, interval: { low: 30, high: 36, halfWidth } }, 'valorant', 800).message
+    expect(withHalfWidth(0.1041, false)).toContain('±10.4% wide')
+    expect(withHalfWidth(0.0996, true)).toContain('within ±9.9%')
   })
 
   it('asks for another Session when one cannot give an interval', () => {
