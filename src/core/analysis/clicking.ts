@@ -66,7 +66,17 @@ export function analyseClicking(run: RunData): ClickingAnalysis {
       across[bin] = (across[bin] ?? 0) + s.across - before.across
     })
 
-    const { primaryEnd } = readProfile(speedProfile(along, across))
+    const speed = speedProfile(along, across)
+    const { peaks, primaryEnd } = readProfile(speed)
+    // Path Deviation: perpendicular distance, averaged over the path travelled (each ms counts as much as it moved).
+    let sampleIndex = 0
+    let deviationSum = 0
+    speed.forEach((v, ms) => {
+      while (samples[sampleIndex + 1] && Math.floor(samples[sampleIndex + 1]?.ms ?? 0) <= ms) sampleIndex++
+      deviationSum += v * Math.abs(samples[sampleIndex]?.across ?? 0)
+    })
+    const travelled = speed.reduce((a, b) => a + b, 0)
+    const pathDeviation = travelled === 0 ? 0 : deviationSum / travelled
     // Where the crosshair is once the Primary Submovement's last ms has passed (still at the start if it never moved).
     const last = samples.findLastIndex((s) => primaryEnd !== null && Math.floor(s.ms) <= primaryEnd)
     const primaryEndAlong = samples[Math.max(0, last)]?.along ?? 0
@@ -75,12 +85,13 @@ export function analyseClicking(run: RunData): ClickingAnalysis {
     if (primaryEndAlong > idealDistance + e.radius) outcome = 'overshoot'
     else if (primaryEndAlong < idealDistance - e.radius) outcome = 'undershoot'
 
-    movements.push({ targetId: e.id, startMs: e.t, endMs, idealDistance, primaryEndAlong, outcome })
+    movements.push({ targetId: e.id, startMs: e.t, endMs, idealDistance, primaryEndAlong, outcome, pathDeviation, velocityPeaks: peaks })
   }
 
   const { hits, shots, accuracy } = tallyShots(run.targetEvents)
   const count = (outcome: Outcome) => movements.filter((m) => m.outcome === outcome).length
-  const rate = (n: number) => (movements.length === 0 ? 0 : n / movements.length)
+  const perMovement = (n: number) => (movements.length === 0 ? 0 : n / movements.length)
+  const total = (pick: (m: AimMovement) => number) => movements.reduce((sum, m) => sum + pick(m), 0)
   const overshoots = count('overshoot')
   const undershoots = count('undershoot')
   return {
@@ -92,7 +103,9 @@ export function analyseClicking(run: RunData): ClickingAnalysis {
     accuracy,
     overshoots,
     undershoots,
-    overshootRate: rate(overshoots),
-    undershootRate: rate(undershoots),
+    overshootRate: perMovement(overshoots),
+    undershootRate: perMovement(undershoots),
+    pathDeviation: perMovement(total((m) => m.pathDeviation)),
+    smoothness: perMovement(total((m) => m.velocityPeaks)),
   }
 }

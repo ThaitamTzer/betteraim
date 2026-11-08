@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RunParams, RunRecord } from '../types'
-import { aimBot, missBot, runBot } from '../testing/bots'
+import { aimBot, lineBot, missBot, runBot } from '../testing/bots'
 import type { Bot } from '../testing/bots'
 import { testMeta, testParams } from '../testing/params'
 import { analyseRun } from '.'
@@ -50,6 +50,42 @@ describe.each(setups)('Primary Submovement at $sensitivity cm/360, $dpi DPI', (s
       expect(analysis.undershootRate).toBe(1)
       expect(analysis.overshootRate).toBe(0)
     })
+  })
+})
+
+describe.each(setups)('Smoothness at $sensitivity cm/360, $dpi DPI', (setup) => {
+  it('is one velocity peak per Aim Movement for a smooth bot, whatever the integer counts do', () => {
+    const { analysis } = analyse(lineBot(), setup)
+    expect(analysis.smoothness).toBeCloseTo(1, 1)
+    expect(Math.max(...analysis.movements.map((m) => m.velocityPeaks))).toBeLessThanOrEqual(1)
+  })
+
+  it('counts a correction as a peak: a bot that overshoots has two', () => {
+    expect(analyse(aimBot({ gain: 1.3 }), setup).analysis.smoothness).toBeCloseTo(2, 1)
+  })
+
+  it('is higher for a jerky bot that moves in four bursts than for a smooth one', () => {
+    const smooth = analyse(lineBot(), setup).analysis.smoothness
+    const jerky = analyse(lineBot({ bursts: 4, burstMs: 40, pauseMs: 30 }), setup).analysis.smoothness
+    expect(jerky).toBeCloseTo(4, 1)
+    expect(jerky).toBeGreaterThan(smooth + 2)
+  })
+})
+
+describe.each(setups)('Path Deviation at $sensitivity cm/360, $dpi DPI', (setup) => {
+  it.each([1, 8])('is close to zero for a bot that follows the Ideal Path, with %i ms between ticks', (tickMs) => {
+    const { analysis } = analyse(lineBot(), setup, tickMs)
+    expect(analysis.pathDeviation).toBeLessThan(0.1)
+    // overshooting or stopping short along the line is still on the line
+    expect(analyse(lineBot({ burstMs: 60, bursts: 3, pauseMs: 40 }), setup, tickMs).analysis.pathDeviation).toBeLessThan(0.1)
+  })
+
+  it('is the mean perpendicular distance in degrees: a path bowed 4 degrees at its midpoint averages about 2.5', () => {
+    const { analysis } = analyse(lineBot({ bow: 4 }), setup)
+    // mean of |4 sin(pi x)| along the path is 4 x 2/pi = 2.55; the speed weighting moves it a little
+    expect(analysis.pathDeviation).toBeGreaterThan(2)
+    expect(analysis.pathDeviation).toBeLessThan(3)
+    expect(analysis.movements.every((m) => m.pathDeviation > 1)).toBe(true)
   })
 })
 

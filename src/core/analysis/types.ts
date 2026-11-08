@@ -17,6 +17,10 @@ export interface AimMovement {
   /** Where the Primary Submovement ended, in degrees along the Ideal Path from its start (past `idealDistance` is beyond the centre). */
   primaryEndAlong: number
   outcome: Outcome
+  /** Mean perpendicular angular distance from the Ideal Path in degrees, over the path travelled. */
+  pathDeviation: number
+  /** Peaks of the velocity profile: one clean push is 1, every correction adds one. */
+  velocityPeaks: number
 }
 
 export interface ClickingAnalysis {
@@ -35,6 +39,10 @@ export interface ClickingAnalysis {
   /** overshoots / movementCount, 0 when there are no Aim Movements. */
   overshootRate: number
   undershootRate: number
+  /** Path Deviation: mean of the Aim Movements' Path Deviation, in degrees. */
+  pathDeviation: number
+  /** Smoothness: mean velocity peaks per Aim Movement (fewer is smoother), 0 when there are none. */
+  smoothness: number
 }
 
 /** Ticket #8 adds the Tracking metrics (Ahead/Behind, time on target). */
