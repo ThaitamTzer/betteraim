@@ -1,6 +1,8 @@
 import { verticalFovDeg } from './aim'
 import type { Cm360, Fov } from './types'
 
+// Where each yaw, vertical multiplier, default and FOV below comes from, and how sure it is: docs/research/game-profiles.md.
+
 /** 360 degrees x 2.54 cm per inch: cm/360 = CM_360 / (yaw x Game Sensitivity x DPI). */
 const CM_360 = 914.4
 

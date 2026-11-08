@@ -1,7 +1,8 @@
 /**
  * The Content Security Policy of the production build, injected as a meta tag by vite.config.ts (GitHub Pages cannot send
  * headers; the dev server needs inline scripts for hot reload, so it gets none). Tested in Chrome against the real build:
- * Three.js, uPlot, React inline styles and Web Audio need nothing beyond this.
+ * Three.js, uPlot, React inline styles and Web Audio need nothing beyond this. Research: docs/research/csp-connect-src.md and
+ * docs/research/chrome-localhost.md (why a hosted page can still reach a local model).
  *
  * - Scripts: only the app's own files. No `unsafe-inline`, no `unsafe-eval`, so injected scripts, inline handlers and `eval` are blocked.
  * - `connect-src` is what the AI Coach fetches: any https address (the player picks the provider), and http only to localhost and
