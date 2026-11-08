@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import type { ReactElement } from 'react'
 import { Home } from './screens/Home'
 import { Converter } from './screens/Converter'
@@ -9,13 +9,20 @@ import { Onboarding } from './screens/Onboarding'
 import { Options } from './screens/Options'
 import { Practice } from './screens/Practice'
 import { Result } from './screens/Result'
-import { RunScreen } from './screens/RunScreen'
 import { Runs } from './screens/Runs'
 import { History } from './screens/History'
 import { SessionSummary } from './screens/SessionSummary'
 import { StorageWarning } from './StorageWarning'
 import type { Go, Route, ScreenProps, Screens } from './routes'
 import './app.css'
+
+// The Run screen is the only one that needs Three.js (~700 kB), so it is its own chunk, fetched when a Run opens.
+const LazyRunScreen = lazy(() => import('./screens/RunScreen').then((m) => ({ default: m.RunScreen })))
+const RunScreen = (props: ScreenProps<'run'>) => (
+  <Suspense fallback={<main className="page"><p className="lede">Loading the Run...</p></main>}>
+    <LazyRunScreen {...props} />
+  </Suspense>
+)
 
 const screens: Screens = {
   home: Home,
