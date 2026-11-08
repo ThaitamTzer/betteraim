@@ -21,7 +21,7 @@ export function Converter({ go }: ScreenProps<'converter'>) {
   return (
     <main className="page">
       <p className="eyebrow">Converter</p>
-      <h1>Move your sensitivity to another game.</h1>
+      <h1>Move your Game Sensitivity to another game.</h1>
       <p className="lede">The distance your mouse travels for a full turn (cm/360) stays the same. Only the number you type in changes.</p>
 
       <div className="setup">

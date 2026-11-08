@@ -179,7 +179,7 @@ describe('category weighting', () => {
     noise: 0,
     trend: 0,
     form: 0,
-    scenarios: { ...syntheticPlayer().scenarios, flick: { level: 60, scale: 20, optimum: clickingBest }, strafe: { level: 55, scale: 12, optimum: trackingBest } },
+    scenarios: { ...syntheticPlayer().scenarios, flick: { baseline: 60, scale: 20, optimum: clickingBest }, strafe: { baseline: 55, scale: 12, optimum: trackingBest } },
   })
   const onlyClicking: SyntheticSession = { levels: coarseLevels(40), scenarios: ['flick'] }
   const onlyTracking: SyntheticSession = { levels: coarseLevels(40), scenarios: ['strafe'] }
@@ -211,7 +211,7 @@ describe('category weighting', () => {
   })
 
   it('scales each Scenario by its own spread, so Scores in other units do not drown the rest', () => {
-    const loud = syntheticPlayer({ ...player, scenarios: { ...player.scenarios, flick: { level: 60000, scale: 20000, optimum: clickingBest } } })
+    const loud = syntheticPlayer({ ...player, scenarios: { ...player.scenarios, flick: { baseline: 60000, scale: 20000, optimum: clickingBest } } })
     const fit = fitFinder(syntheticRuns(loud, mix(5, 5), 1), { weights: { clicking: 0.5, tracking: 0.5 } })
     expect(fit.peak).toBeCloseTo(Math.exp((Math.log(clickingBest) + Math.log(trackingBest)) / 2), 0) // 40, the middle of the two (the loud Scenario alone: 31.7)
   })

@@ -8,7 +8,7 @@ A free aim trainer that finds the mouse sensitivity a player performs best with 
 
 **Sensitivity**:
 How far the view rotates for a given physical mouse movement. Inside BetterAim it is always expressed in cm/360.
-_Avoid_: sens, mouse speed, eDPI
+_Avoid_: sens, eDPI
 
 **cm/360**:
 The physical distance, in centimetres, the mouse must travel to rotate the view a full 360°.
@@ -40,7 +40,7 @@ The estimated relationship between Sensitivity and normalised Score for one Game
 _Avoid_: sens chart, sens graph
 
 **Curve Peak**:
-The Sensitivity at the top of the Performance Curve, always stated with its confidence interval.
+The Sensitivity at the top of the Performance Curve, stated with its confidence interval whenever one exists (it needs at least two Sessions).
 _Avoid_: statistical sens, model sens
 
 **Centre**:
@@ -48,7 +48,7 @@ The Sensitivity a Finder Session's levels are spread around: the player's curren
 
 **Level**:
 One of the Sensitivities a Finder Session plays each of its Scenarios at; the coarse phase has 7, from half to double the Centre.
-_Avoid_: step, setting
+_Avoid_: step, setting, scenario (a Level is a Sensitivity, never an exercise)
 
 **Coarse phase**:
 The Finder's first stage: Sessions with 7 Levels from half to double the Centre, until the Curve Peak's confidence interval is narrower than ±25%. When the best Sensitivity lies outside the tested range, the Centre shifts towards it.
@@ -86,7 +86,7 @@ _Avoid_: "AI" on its own (ambiguous with the statistical model behind the Perfor
 
 **Scenario**:
 A single aim-training exercise with defined targets, rules and duration.
-_Avoid_: map, level, drill, task
+_Avoid_: map, drill, task
 
 **Clicking Scenario**:
 A Scenario scored on discrete shots at targets.
@@ -160,6 +160,10 @@ In tracking, the crosshair leading or trailing a moving target along its directi
 
 **Time on Target**:
 In a Tracking Scenario, the time the fire button is held with the crosshair on a target. Strafe's Score is its share of the Run; a Switch target falls after 0.4 s of it. Not the Aim Movement outcome "on-target".
+
+**Mouse speed**:
+An Analysis metric: how fast the crosshair turns during a Run, in degrees per second (over the Aim Movements of a Clicking Scenario, over the tracked time of a Tracking Scenario). Angular, not cm/s, so it can be compared between Sensitivities. It is a result of how the player aimed, not a Sensitivity.
+_Avoid_: sensitivity, sens (those are the setting, not the movement)
 
 **Smoothness**:
 How few corrections an Aim Movement needs; measured by its number of velocity peaks, fewer meaning smoother.

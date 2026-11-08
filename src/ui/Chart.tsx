@@ -19,7 +19,7 @@ export interface ChartProps {
    * Vertical lines at an x, for example the Curve Peak of the Performance Curve. Labels sit one line lower per marker, so markers close
    * together (the Curve Peak and the AI Coach's choice) stay readable; `tone` picks the line's colour (default `accent`).
    */
-  markers?: readonly { x: number; label?: string; tone?: 'accent' | 'on-target' }[]
+  markers?: readonly { x: number; label?: string; tone?: 'accent' | 'highlight' }[]
   /** Shaded ranges of x behind the lines, for example a confidence interval. */
   bands?: readonly { from: number; to: number }[]
   /** What the x axis and the legend call an x. Default: the number as it is. */
@@ -54,7 +54,7 @@ export function Chart({ x, series, markers = [], bands = [], formatX = String, x
     const muted = css.getPropertyValue('--muted').trim() || '#98a2b3'
     const line = css.getPropertyValue('--line').trim() || '#243044'
     const accent = css.getPropertyValue('--accent').trim() || palette[0]!
-    const tones = { accent, 'on-target': css.getPropertyValue('--on-target').trim() || palette[2]! }
+    const tones = { accent, highlight: css.getPropertyValue('--on-target').trim() || palette[2]! }
     const axis = { stroke: muted, grid: { stroke: line, width: 1 }, ticks: { stroke: line, width: 1 } }
     const plot = new uPlot(
       {

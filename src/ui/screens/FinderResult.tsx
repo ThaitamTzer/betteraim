@@ -85,7 +85,7 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
       ],
       markers: [
         ...(fit.peak === null ? [] : [{ x: fit.peak, label: 'Curve Peak' }]),
-        ...(coachPick === null ? [] : [{ x: coachPick, label: 'AI Coach', tone: 'on-target' as const }]),
+        ...(coachPick === null ? [] : [{ x: coachPick, label: 'AI Coach', tone: 'highlight' as const }]),
       ],
       bands: fit.interval ? [{ from: fit.interval.low, to: fit.interval.high }] : [],
       description: `Performance Curve: Score against Sensitivity in cm/360${fit.peak === null ? ', with no interior peak' : `, highest at ${fmt(fit.peak)} cm/360${bounds}`}${coachPick === null ? '' : `; the AI Coach chose ${fmt(coachPick)} cm/360`}`,

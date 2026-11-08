@@ -25,7 +25,7 @@ export function Onboarding({ go }: ScreenProps<'onboarding'>) {
     <main className="page">
       <h1>{saved ? 'Change your setup' : 'Set up your game.'}</h1>
       <p className="lede">
-        Pick the game you play and enter its sensitivity and your mouse DPI. BetterAim trains with that game&apos;s field of view and
+        Pick the game you play and enter its Game Sensitivity and your mouse DPI. BetterAim trains with that game&apos;s field of view and
         works in cm/360, so the same feel carries across games.
       </p>
 

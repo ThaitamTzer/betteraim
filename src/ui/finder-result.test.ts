@@ -135,7 +135,7 @@ describe('what the next Session will do', () => {
 describe('the Clicking and Tracking curves', () => {
   const disagree = syntheticPlayer({
     noise: 0.1,
-    scenarios: { ...syntheticPlayer().scenarios, flick: { level: 60, scale: 20, optimum: 30 }, strafe: { level: 55, scale: 12, optimum: 70 } },
+    scenarios: { ...syntheticPlayer().scenarios, flick: { baseline: 60, scale: 20, optimum: 30 }, strafe: { baseline: 55, scale: 12, optimum: 70 } },
   })
   const categories = (player: ReturnType<typeof syntheticPlayer>, sessions = 10) =>
     fitCategories(syntheticRuns(player, Array.from({ length: sessions }, () => ({ levels: coarseLevels(40) })), 3), { weights: WEIGHTS })
@@ -167,7 +167,7 @@ describe('the Clicking and Tracking curves', () => {
   })
 
   it('says when a category has no peak inside the tested range', () => {
-    const view = categoriesView(categories(syntheticPlayer({ optimum: 40, noise: 0.05, scenarios: { ...syntheticPlayer().scenarios, strafe: { level: 55, scale: 12, optimum: 300 } } }), 6))
+    const view = categoriesView(categories(syntheticPlayer({ optimum: 40, noise: 0.05, scenarios: { ...syntheticPlayer().scenarios, strafe: { baseline: 55, scale: 12, optimum: 300 } } }), 6))
     expect(view.categories[1]!.message).toMatch(/^Tracking: no peak inside the tested range yet.*higher cm\/360/)
     expect(view.difference).toBeNull()
   })
