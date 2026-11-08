@@ -105,11 +105,17 @@ One play-through of a Scenario at a single Sensitivity.
 _Avoid_: round, attempt, game, play
 
 **Session**:
-A continuous stretch of Runs played in one sitting.
+A continuous stretch of Runs played in one sitting, in the Sensitivity Finder or in Practice.
 _Avoid_: playthrough, workout
 
+**Session summary**:
+The screen that compares the Scenarios of one Session on Score and Analysis metrics.
+
+**History**:
+The screen that charts Score and Analysis metrics over the days the player has played.
+
 **Warm-up Run**:
-One of the first Runs of a Session, played but excluded from the Sensitivity Finder's estimate.
+One of the first Runs of a Session, played but excluded from the Sensitivity Finder's estimate and from every Session summary and History metric.
 
 **Score**:
 The single number a Run produces, defined per Scenario so that it already balances speed and accuracy.

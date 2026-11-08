@@ -2,13 +2,23 @@ import { useEffect, useRef, useState } from 'react'
 import { exportData, ImportError, importData } from '../../core'
 import type { RunSummary } from '../../core'
 import { runStore } from '../../storage/runs'
-import type { ScreenProps } from '../routes'
+import type { Go, ScreenProps } from '../routes'
 import { formatScore } from '../score'
 
 type Notice = { kind: 'ok' | 'problem'; text: string }
 
 const describe = (error: unknown) => (error instanceof Error ? error.message : String(error))
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+/** A Run saved before Sessions existed has none to summarise. */
+function SessionLink({ sessionId, go }: { sessionId: string | undefined; go: Go }) {
+  if (sessionId === undefined) return null
+  return (
+    <button type="button" className="link" onClick={() => go({ name: 'session', sessionId, back: { name: 'runs' } })}>
+      Summary
+    </button>
+  )
+}
 
 export function Runs({ go }: ScreenProps<'runs'>) {
   const [runs, setRuns] = useState<RunSummary[] | null>(null)
@@ -97,6 +107,7 @@ export function Runs({ go }: ScreenProps<'runs'>) {
                 <th scope="col">Score</th>
                 <th scope="col">Sensitivity</th>
                 <th scope="col">Mode</th>
+                <th scope="col">Session</th>
               </tr>
             </thead>
             <tbody>
@@ -109,6 +120,9 @@ export function Runs({ go }: ScreenProps<'runs'>) {
                   <td>
                     {capitalize(r.mode)}
                     {r.warmup && ', warm-up'}
+                  </td>
+                  <td>
+                    <SessionLink sessionId={r.sessionId} go={go} />
                   </td>
                 </tr>
               ))}

@@ -6,13 +6,19 @@ import type { ScreenProps } from '../routes'
 import { formatScore, trackingRule } from '../score'
 
 export function Result({ route, go }: ScreenProps<'result'>) {
-  const { record, again } = route
+  const { record, again, more } = route
+  const { sessionId } = record
   const { hits, shots, accuracy } = tallyShots(record.targetEvents)
   const rule = trackingRule[record.scenario]
   const [saveError, setSaveError] = useState<string | null>(null)
   useEffect(() => {
     saveOutcome(record.id)?.catch((error: unknown) => setSaveError(error instanceof Error ? error.message : String(error)))
   }, [record.id])
+  // Saving runs in the background: wait for this Run to be stored so the summary includes it (a failed save is shown above).
+  const showSession = async (sessionId: string) => {
+    await saveOutcome(record.id)?.catch(() => undefined)
+    go({ name: 'session', sessionId, back: route })
+  }
   return (
     <main className="page">
       <p className="eyebrow">Run complete</p>
@@ -49,6 +55,16 @@ export function Result({ route, go }: ScreenProps<'result'>) {
         <button type="button" className="primary" onClick={() => go(again)} autoFocus>
           Play again
         </button>
+        {more && (
+          <button type="button" onClick={() => go(more)}>
+            Pick another Scenario
+          </button>
+        )}
+        {sessionId !== undefined && (
+          <button type="button" onClick={() => void showSession(sessionId)}>
+            Session summary
+          </button>
+        )}
         <button type="button" onClick={() => go({ name: 'home' })}>
           Change setup
         </button>

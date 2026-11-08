@@ -9,11 +9,17 @@ import type { FinderSession, FinderStep } from './finder'
 export type Route =
   | { name: 'home' }
   | { name: 'runs' }
+  | { name: 'history' }
+  /** The Session summary of one Session (Finder or Practice); `back` is where its Back button goes. */
+  | { name: 'session'; sessionId: string; back: Route }
   | { name: 'onboarding' }
   | { name: 'converter' }
   | { name: 'options' }
-  /** Scenario picker; a chosen Scenario is played as a Practice Run with these settings (from the active Game Profile). */
-  | { name: 'practice'; sensitivity: number; dpi: number; fov: Fov; gameProfileId: string }
+  /**
+   * Scenario picker; a chosen Scenario is played as a Practice Run with these settings (from the active Game Profile).
+   * `sessionId` is the Practice Session to carry on; the picker makes a new one when it is absent (it opens from Home).
+   */
+  | { name: 'practice'; sensitivity: number; dpi: number; fov: Fov; gameProfileId: string; sessionId?: string }
   | {
       name: 'run'
       params: RunParams
@@ -31,7 +37,8 @@ export type Route =
   | { name: 'finder' }
   /** Between the Runs of a Finder Session; `last` is the Run that just finished (rest only). The topbar is hidden here. */
   | { name: 'finderSession'; session: FinderSession; step: FinderStep; last?: RunRecord }
-  | { name: 'result'; record: RunRecord; again: Route }
+  /** `more` goes to the next pick of the same Session (the Practice picker); absent when the Session has no picker. */
+  | { name: 'result'; record: RunRecord; again: Route; more?: Route }
 
 export type Go = (route: Route) => void
 
