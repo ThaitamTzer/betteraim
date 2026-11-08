@@ -36,10 +36,17 @@ export type InputEvent =
 /** The input that is stored in a Run record. */
 export type RecordedInput = Exclude<InputEvent, { kind: 'tick' }>
 
-/** A live target. `radius` is its angular radius in degrees as seen from the crosshair origin. */
+/**
+ * A live target. `radius` is its angular radius in degrees as seen from the crosshair origin.
+ * A moving target (Tracking) also reports how it is moving right now: `speed` in degrees per second on the
+ * sphere and `heading`, the direction of travel as a bearing in degrees (0 = up, 90 = right, as in `offsetAim`).
+ * Both are absent on a target that never moves.
+ */
 export interface Target extends Aim {
   id: number
   radius: number
+  speed?: number
+  heading?: number
 }
 
 /**

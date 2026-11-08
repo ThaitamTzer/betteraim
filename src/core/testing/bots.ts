@@ -1,6 +1,6 @@
-import { aimDelta, degreesPerCount } from '../aim'
+import { aimDelta, angleBetween, degreesPerCount, offsetAim } from '../aim'
 import { createRun, RUN_DURATION_MS } from '../run'
-import type { Aim, RunParams, RunResult, RunState } from '../types'
+import type { Aim, RunParams, RunResult, RunState, Target } from '../types'
 
 /** What a bot asks for on one tick. `turn` is in degrees (yaw > 0 right, pitch > 0 up); `fire` is whether the fire button is held. */
 export interface BotAction {
@@ -87,6 +87,31 @@ export function aimBot({ gain = 1, moveMs = 120, reactionMs = 0, correctionMs = 
     const arrived = elapsed >= moveMs + (gain !== 1 ? correctionMs : 0)
     if (arrived) firing = !firing
     return { turn: aimDelta(state.crosshair, desired), fire: arrived && firing }
+  }
+}
+
+export interface TrackBotOptions {
+  /**
+   * Where to aim, in ms of the target's travel along its heading: 0 is dead on, > 0 leads (Ahead), < 0 trails (Behind).
+   * First-order, so it is exact for a constant velocity and close for the smooth paths of Tracking Scenarios.
+   */
+  leadMs?: number
+}
+
+/**
+ * Tracking bot: holds fire and puts the crosshair on the target it is locked on, every tick. It locks on the
+ * target nearest to the crosshair and stays on it until it is gone, then locks on the nearest again.
+ */
+export function trackBot({ leadMs = 0 }: TrackBotOptions = {}): Bot {
+  let locked = -1
+  return (state) => {
+    const nearest = (best: Target | undefined, t: Target) =>
+      !best || angleBetween(state.crosshair, t) < angleBetween(state.crosshair, best) ? t : best
+    const target = state.targets.find((t) => t.id === locked) ?? state.targets.reduce(nearest, undefined)
+    if (!target) return
+    locked = target.id
+    const ahead = offsetAim(target, ((target.speed ?? 0) * leadMs) / 1000, target.heading ?? 0)
+    return { turn: aimDelta(state.crosshair, ahead), fire: true }
   }
 }
 
