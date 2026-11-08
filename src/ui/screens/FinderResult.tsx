@@ -241,10 +241,10 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
             earlier Run stays in Analysis, History and Past Runs, and in your exports.
           </p>
           <div className="actions">
-            <button type="button" className="primary" onClick={() => void resetFinder()} autoFocus>
+            <button type="button" className="primary" onClick={() => void resetFinder()}>
               Reset Finder
             </button>
-            <button type="button" onClick={() => setConfirmingReset(false)}>
+            <button type="button" onClick={() => setConfirmingReset(false)} autoFocus>
               Keep my curve
             </button>
           </div>

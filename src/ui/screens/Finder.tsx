@@ -17,10 +17,11 @@ export function Finder({ go }: ScreenProps<'finder'>) {
   // One Session per visit to this screen, planned now (from the Runs so far: coarse, fine or shifted) so the copy can state its size.
   const [planned, setPlanned] = useState<Planned>(null)
   useEffect(() => {
-    if (!settings) {
-      go({ name: 'onboarding' })
-      return
-    }
+    if (!settings) go({ name: 'onboarding' })
+  }, [settings, go])
+  // Not keyed on `go` (a new function on every App render): that would plan another Session, with a new seed, each time.
+  useEffect(() => {
+    if (!settings) return
     let current = true
     void (async () => {
       const { runs, exclude } = await finderRunsFor(await runStore(), settings.gameProfileId)
@@ -33,7 +34,7 @@ export function Finder({ go }: ScreenProps<'finder'>) {
     return () => {
       current = false
     }
-  }, [settings, go])
+  }, [settings])
   if (!settings) return <></>
   if (!planned) return <main className="page"><p className="lede">Planning your Session...</p></main>
   if ('error' in planned) {

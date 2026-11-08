@@ -30,6 +30,8 @@ export function openRunStore(name = 'betteraim'): Promise<RunStore> {
       if (!names.contains(RESETS)) opening.result.createObjectStore(RESETS, { keyPath: 'id' })
     }
     opening.onerror = () => reject(opening.error)
+    // Version 2 cannot open while an older BetterAim tab still holds version 1; say so instead of hanging.
+    opening.onblocked = () => reject(new Error('Another BetterAim tab is using an older version of your data. Close it and reload this page.'))
     opening.onsuccess = () => {
       const db = opening.result
       resolve({
