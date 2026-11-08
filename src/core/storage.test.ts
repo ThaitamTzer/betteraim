@@ -49,7 +49,7 @@ describe('run store', () => {
     expect(await ids({ until: 200 })).toEqual(['a', 'b'])
     expect(await ids({ until: 199 })).toEqual(['a'])
     expect(await ids({ gameProfileId: 'cs2', since: 150 })).toEqual(['b'])
-    expect(await ids({ gameProfileId: 'none' })).toEqual([])
+    expect(await ids({ gameProfileId: 'fortnite' })).toEqual([])
   })
 })
 
@@ -69,8 +69,14 @@ describe('Reset Finder markers', () => {
     const store = createMemoryStore()
     const record = testRecord({}, { id: 'a', startedAt: 100 })
     await store.save([record])
-    await store.resetFinder('test', 1_000)
+    await store.resetFinder('valorant', 1_000)
     expect(await store.list()).toHaveLength(1)
     expect(await store.get('a')).toEqual(record)
+  })
+
+  it('are for a Game Profile, which the type says: an unknown id does not compile', async () => {
+    const store = createMemoryStore()
+    // @ts-expect-error 'quake' is not a GameProfileId; `pnpm typecheck` fails if this stops being an error
+    await store.resetFinder('quake', 1_000)
   })
 })

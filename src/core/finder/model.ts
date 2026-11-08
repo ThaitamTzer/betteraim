@@ -87,6 +87,9 @@ export interface FinderFit {
   }
 }
 
+/** The end of the tested range a fit with no interior peak points to: where its curve is higher. The next Session moves its Centre that way. */
+export const pointsTo = (fit: FinderFit): 'higher' | 'lower' => (fit.curve.score.at(-1)! >= fit.curve.score[0]! ? 'higher' : 'lower')
+
 /**
  * The Sensitivity to recommend: the AI Coach's choice (`coach.recommended`, see `recommendSensitivity`) when it came from the AI Coach
  * and lies inside `fit.interval`, else the Curve Peak (no AI Coach connected, it failed, or there is no interval to choose within).

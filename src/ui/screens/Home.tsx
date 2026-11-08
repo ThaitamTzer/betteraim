@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { cm360For, degreesPerCount, eDpi, getGameProfile, practiceFov } from '../../core'
-import { rawInputLikelySupported } from '../../input/pointer'
-import { RAW_INPUT_BROWSERS } from '../finder'
+import { RAW_INPUT_BROWSERS, rawInputLikelySupported } from '../../input/pointer'
 import { fmt } from '../format'
 import type { ScreenProps } from '../routes'
 import { loadPreferences } from '../preferences'

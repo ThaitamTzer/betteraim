@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { tallyShots } from '../../core'
+import { errorMessage } from '../../error-message'
 import { saveOutcome } from '../../storage/runs'
 import { RunAnalysisPanel } from '../RunAnalysisPanel'
 import type { ScreenProps } from '../routes'
@@ -12,7 +13,7 @@ export function Result({ route, go }: ScreenProps<'result'>) {
   const rule = trackingRule[record.scenario]
   const [saveError, setSaveError] = useState<string | null>(null)
   useEffect(() => {
-    saveOutcome(record.id)?.catch((error: unknown) => setSaveError(error instanceof Error ? error.message : String(error)))
+    saveOutcome(record.id)?.catch((error: unknown) => setSaveError(errorMessage(error)))
   }, [record.id])
   // Saving runs in the background: wait for this Run to be stored so the summary includes it (a failed save is shown above).
   const showSession = async (sessionId: string) => {

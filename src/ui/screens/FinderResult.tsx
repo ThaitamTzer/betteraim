@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { finderRunsFor, fitCategories, fitFinder, getGameProfile, INTERVAL_LEVEL, nextSession, practiceFov } from '../../core'
 import type { FinderFit, NextSession, ScenarioCategory } from '../../core'
+import { errorMessage } from '../../error-message'
 import { runStore, saveOutcome } from '../../storage/runs'
 import { Chart } from '../Chart'
 import { CoachPanel } from '../CoachPanel'
@@ -15,7 +16,6 @@ import '../summary.css'
 import '../finder-result.css'
 
 const formatX = (x: number): string => fmt(x)
-const errorText = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
 type Loaded = { fit: FinderFit; categories: Record<ScenarioCategory, FinderFit>; next: NextSession } | { error: string } | null
 
@@ -37,7 +37,7 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
     let current = true
     void (async () => {
       // The Session's last Run is still being saved when this opens: wait for it, or the fit would miss it.
-      if (saving) await saveOutcome(saving)?.catch((error: unknown) => current && setSaveError(errorText(error)))
+      if (saving) await saveOutcome(saving)?.catch((error: unknown) => current && setSaveError(errorMessage(error)))
       const store = await runStore()
       // The Runs and the Reset marker come from finderRunsFor, the one place the marker is applied.
       const { runs, exclude } = await finderRunsFor(store, gameProfileId)
@@ -48,7 +48,7 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
       return { fit, categories: fitCategories(runs, options), next: nextSession(fit, centreOf(own)) }
     })().then(
       (result) => current && setLoaded(result),
-      (error: unknown) => current && setLoaded({ error: errorText(error) }),
+      (error: unknown) => current && setLoaded({ error: errorMessage(error) }),
     )
     return () => {
       current = false
@@ -62,7 +62,7 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
       setConfirmingReset(false)
       setReloads((n) => n + 1)
     } catch (error) {
-      setResetError(errorText(error))
+      setResetError(errorMessage(error))
     }
   }
 

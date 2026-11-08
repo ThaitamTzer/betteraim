@@ -1,18 +1,11 @@
 import { cm360For, getGameProfile, getScenario, planSession, profileFov } from '../core'
 import type { Cm360, Fov, GameProfileId, NextSession, PlannedRun, RunRecord } from '../core'
+import { RAW_INPUT_BROWSERS } from '../input/pointer'
 import type { Route } from './routes'
 import type { Settings } from './settings'
 
 /** Rests make a Session about 10 minutes: 16 Runs of 30 s is 8, plus this wait before each of the 15 next Runs. */
 export const MIN_REST_SECONDS = 8
-
-/**
- * Where raw mouse input (Pointer Lock `unadjustedMovement`) works, from docs/research/pointer-lock-raw-input.md (2026-11-08,
- * MDN browser-compat-data), as ADR-0001 now says: Firefox 152 and Safari 18.4 added the option to Chromium's.
- * Firefox and Safari report `movementX/Y` in other units than Chrome; the Run's `env` records that for later correction.
- */
-export const RAW_INPUT_BROWSERS =
-  'Chrome, Edge and Opera 88 or newer on Windows, macOS or ChromeOS; Firefox 152 or newer on Windows or macOS; Safari 18.4 or newer. Linux is not supported yet.'
 
 /**
  * A Sensitivity Finder Session in progress. Lives in the route (memory only), so a reload ends it: the Runs finished so far

@@ -63,7 +63,7 @@ describe('exporting and importing', () => {
 
     it('are validated before anything is written: a bad marker rejects the whole file', async () => {
       const good = JSON.parse(await exportData(await resetStore()))
-      for (const bad of [[], 'now', { valorant: 'yesterday' }, { valorant: null }, { valorant: [1] }]) {
+      for (const bad of [[], 'now', { valorant: 'yesterday' }, { valorant: null }, { valorant: [1] }, { quake: 5 }, { constructor: 5 }]) {
         const target = await storeWith([testRecord({ seed: 5 }, { id: 'keep', startedAt: 10 })])
         await target.resetFinder('cs2', 50)
         await expect(importData(target, JSON.stringify({ ...good, finderResets: bad }))).rejects.toThrow(ImportError)
@@ -159,6 +159,7 @@ describe('exporting and importing', () => {
       'a missing version': ({ version, ...f }) => (void version, stringify(f)),
       'runs that is not a list': (f) => stringify({ ...f, runs: {} }),
       'an unknown Scenario': (f) => stringify({ ...f, runs: [{ ...f.runs[0], scenario: 'nope' }, ...f.runs.slice(1)] }),
+      'an unknown Game Profile': (f) => stringify({ ...f, runs: [{ ...f.runs[0], gameProfileId: 'quake' }, ...f.runs.slice(1)] }),
       'an unknown mode': (f) => stringify({ ...f, runs: [{ ...f.runs[0], mode: 'ranked' }, ...f.runs.slice(1)] }),
       'a non-numeric Score': (f) => stringify({ ...f, runs: [{ ...f.runs[0], score: '9' }, ...f.runs.slice(1)] }),
       'a capture environment that is not an object': (f) => stringify({ ...f, runs: [{ ...f.runs[0], env: 'Chrome' }, ...f.runs.slice(1)] }),

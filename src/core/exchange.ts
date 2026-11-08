@@ -1,4 +1,6 @@
 import { fromBase64, toBase64 } from './codec'
+import { isGameProfileId } from './game-profiles'
+import type { GameProfileId } from './game-profiles'
 import { packRun, unpackRun } from './storage'
 import type { FinderResets, RunStore, RunSummary } from './storage'
 import type { RunMode, RunRecord, ScenarioId } from './types'
@@ -55,7 +57,7 @@ export async function importData(store: RunStore, text: string, validatePlayer: 
   const { runs, finderResets, player } = parseExport(text)
   const accepted = player && accept(validatePlayer, player)
   await store.save(runs)
-  for (const [gameProfileId, at] of Object.entries(finderResets)) await store.resetFinder(gameProfileId, at)
+  for (const [gameProfileId, at] of Object.entries(finderResets) as [GameProfileId, number][]) await store.resetFinder(gameProfileId, at)
   return { runs: runs.length, player: accepted }
 }
 
@@ -92,7 +94,12 @@ export function parseExport(text: string): { runs: RunRecord[]; finderResets: Fi
 function parseResets(raw: unknown): FinderResets {
   if (raw === undefined) return {} // files from before Reset Finder, or from a player who never reset
   if (!isObj(raw)) fail('"finderResets" must be an object.')
-  return Object.fromEntries(Object.entries(raw).map(([id, at]) => [id, isNum(at) ? at : fail(`Reset marker "${id}" must be a number.`)]))
+  return Object.fromEntries(
+    Object.entries(raw).map(([id, at]) => [
+      isGameProfileId(id) ? id : fail(`Reset marker "${id}" is not a known Game Profile.`),
+      isNum(at) ? at : fail(`Reset marker "${id}" must be a number.`),
+    ]),
+  )
 }
 
 type Obj = Record<string, unknown>
@@ -108,6 +115,7 @@ const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number
 const isText = (v: unknown): v is string => typeof v === 'string'
 const isId = (v: unknown): v is string => isText(v) && v !== ''
 const isBool = (v: unknown): v is boolean => typeof v === 'boolean'
+const isGameProfile = (v: unknown): v is GameProfileId => isText(v) && isGameProfileId(v)
 const oneOf =
   <T extends string>(...values: T[]) =>
   (v: unknown): v is T =>
@@ -138,7 +146,7 @@ function parseRun(raw: unknown): RunRecord {
     },
     id: field(raw, 'id', isId, 'text'),
     startedAt: field(raw, 'startedAt', isNum, 'a number'),
-    gameProfileId: field(raw, 'gameProfileId', isText, 'text'),
+    gameProfileId: field(raw, 'gameProfileId', isGameProfile, 'a known Game Profile'),
     mode: field(raw, 'mode', oneOf<RunMode>('finder', 'practice'), 'finder or practice'),
     warmup: field(raw, 'warmup', isBool, 'true or false'),
     ...(raw.sessionId === undefined ? {} : { sessionId: field(raw, 'sessionId', isText, 'text') }), // absent in Practice

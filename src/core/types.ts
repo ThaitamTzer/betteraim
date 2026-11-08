@@ -1,4 +1,5 @@
 // Shared vocabulary of the headless core. No DOM, WebGL or React in src/core (enforced, see src/core/README.md).
+import type { GameProfileId } from './game-profiles'
 
 /** Sensitivity is always cm/360 inside BetterAim, never Game Sensitivity or eDPI (see GLOSSARY.md). */
 export type Cm360 = number
@@ -85,7 +86,7 @@ export interface RunMeta {
   id: string
   /** Epoch ms, supplied by the shell. */
   startedAt: number
-  gameProfileId: string
+  gameProfileId: GameProfileId
   mode: RunMode
   warmup: boolean
   /** The sitting this Run belongs to (Finder and Practice both have one). Absent only in Runs saved before Practice had Sessions. */

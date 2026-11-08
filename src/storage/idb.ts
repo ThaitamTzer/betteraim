@@ -1,5 +1,5 @@
 import { packRun, selectRuns, unpackRun } from '../core'
-import type { RunBody, RunStore, RunSummary } from '../core'
+import type { FinderResets, RunBody, RunStore, RunSummary } from '../core'
 
 // Two object stores so that listing never loads the ~400 kB binary body of every Run.
 const SUMMARIES = 'runs'
@@ -51,7 +51,7 @@ export function openRunStore(name = 'betteraim'): Promise<RunStore> {
         },
         async finderResets() {
           const all = await request<{ id: string; at: number }[]>(db.transaction(RESETS).objectStore(RESETS).getAll())
-          return Object.fromEntries(all.map(({ id, at }): [string, number] => [id, at]))
+          return Object.fromEntries(all.map(({ id, at }): [string, number] => [id, at])) as FinderResets
         },
         async resetFinder(gameProfileId, at) {
           const tx = db.transaction(RESETS, 'readwrite')

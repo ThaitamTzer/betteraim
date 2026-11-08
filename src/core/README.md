@@ -14,7 +14,7 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 - `rng.ts` `createRng(seed)`. `tally.ts` `tallyShots`. `testing/` bots and test params (tests only).
 - `codec.ts` lossless binary form of `input` and `targetEvents` (+ base64). `storage.ts` the `RunStore` port (`save`, `list(filter)`
   summaries, `get`) and `createMemoryStore()` for tests. `exchange.ts` `exportData`/`importData`: one versioned JSON file, validated
-  before any write, merged by Run id. The store also keeps the Reset Finder markers (`finderResets()`, `resetFinder(id, at)`, see below); the export file carries
+  before any write (a Run or Reset marker whose Game Profile id is unknown rejects the file, like an unknown Scenario), merged by Run id. The store also keeps the Reset Finder markers (`finderResets()`, `resetFinder(id, at)`, see below); the export file carries
   them as the optional `finderResets` key, and the player's setup (Settings, Preferences, Player Context: an opaque record `PlayerData` the shell builds and validates, `importData(store, text, validatePlayer)` returns it in `ImportResult.player`) as the optional `player` key; the AI Coach's settings are never in it. The IndexedDB adapter is shell code in `src/storage/`. `testing/records.ts` `testRecord()` is a
   fully played record.
 - `game-profiles.ts` the 7 Game Profiles (yaw, vertical setting, FOV, default Game Sensitivity, Clicking/Tracking weights, each
@@ -22,8 +22,8 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   `profileFov(id)`, the `Fov` a Run renders with (always vertical, so a horizontal FOV on a 4:3 or 16:9 base is Hor+). `practiceFov(id, override)` is the Practice-only variant (Options' FOV override); the Sensitivity Finder must call `profileFov(id)`.
   A Game Profile id (`GameProfileId`) is what `RunMeta.gameProfileId` holds. Add a game by adding one entry to the table.
 - `aggregate.ts` pure aggregators over `AnalysedRun = { run: RunSummary, analysis: RunAnalysis }`: `aggregateRuns(items)` pools per Scenario
-  (rates recomputed from pooled counts, Warm-up Runs only counted in `warmups`), `groupRuns(items, keyOf)` for any grouping, with `bySession`
-  and `byDay(items, dayOf)` on top (the shell supplies `dayOf`: the core has no time zone). `loadAnalysed(store, filter, cache?)` lists, loads and
+  (rates recomputed from pooled counts, Warm-up Runs only counted in `warmups`), `groupRuns(items, keyOf)` for any grouping (a Session is `(i) => i.run.sessionId`), with
+  `byDay(items, dayOf)` on top (the shell supplies `dayOf`: the core has no time zone). `loadAnalysed(store, filter, cache?)` lists, loads and
   analyses Runs (15 to 70 ms per Run, Tracking Runs the most: pass a `Map` cache when you load more than once). `loadAnalysedRuns(store, summaries, cache?, onProgress?)` is the same for Runs already picked (the AI Coach analyses only `fit.counts.used`); `onProgress(done, total)` is awaited, so a screen can slice the work. `poolTracking` pools `TrackingMetrics` (= `TrackingAnalysis`) by sample count and Run length.
 - `finder/` the Session plan (`plan.ts`, #9), the fit (`model.ts`, #10), the next Session, Reset and per-category fits (`next.ts`, `reset.ts`, `categories.ts`, #11); see the Finder sections below. The AI Coach's Recommended Sensitivity (#15) is in `coach/sensitivity.ts`.
 - `coach/` the AI Coach (ADR-0003), network-free. `provider.ts` is the port: `CoachProvider.complete({ system, prompt, json? })` returns the model's text

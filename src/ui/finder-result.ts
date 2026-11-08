@@ -1,4 +1,4 @@
-import { ENOUGH_HALF_WIDTH, eDpi, FINE_HALF_WIDTH, FINE_SPREAD, gameSensitivityFor, getGameProfile, recommend } from '../core'
+import { ENOUGH_HALF_WIDTH, eDpi, FINE_HALF_WIDTH, FINE_SPREAD, gameSensitivityFor, getGameProfile, pointsTo, recommend } from '../core'
 import type { FinderFit, GameProfileId, NextSession, Recommendation, ScenarioCategory } from '../core'
 import { fmt } from './format'
 
@@ -33,7 +33,7 @@ export function resultView(fit: FinderFit, gameProfileId: GameProfileId, dpi: nu
   const message = ((): string => {
     if (fit.reason === 'no-interior-peak') {
       // The edge of the range is never offered as a Recommended Sensitivity, so no number is named here.
-      const side = fit.curve.score.at(-1)! >= fit.curve.score[0]! ? 'higher (slower)' : 'lower (faster)'
+      const side = pointsTo(fit) === 'higher' ? 'higher (slower)' : 'lower (faster)'
       return `Your best Sensitivity seems to lie outside the range you tested, towards a ${side} cm/360. There is no Curve Peak yet, so no Sensitivity is recommended. The next Session shifts the range that way.`
     }
     if (fit.reason === 'insufficient-data') {
@@ -117,7 +117,7 @@ export function categoriesView(fits: Record<ScenarioCategory, FinderFit>): Categ
           : `${label}: peak ${fmt(fit.peak)} cm/360, no interval yet (it needs more Sessions with a ${label} Scenario).`
       }
       if (fit.reason === 'no-interior-peak') {
-        const side = fit.curve.score.at(-1)! >= fit.curve.score[0]! ? 'higher' : 'lower'
+        const side = pointsTo(fit)
         return `${label}: no peak inside the tested range yet, the curve is still climbing towards ${side} cm/360.`
       }
       return `${label}: not enough finished data for a curve yet. A Scenario counts once you have played it at every level of a Session.`

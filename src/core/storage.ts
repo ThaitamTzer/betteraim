@@ -1,4 +1,5 @@
 import { decodeInput, decodeTargetEvents, encodeInput, encodeTargetEvents } from './codec'
+import type { GameProfileId } from './game-profiles'
 import type { RunMode, RunRecord } from './types'
 
 /** A Run without its bulky parts: all that the Finder fit and History lists need. */
@@ -12,7 +13,7 @@ export interface RunBody {
 
 /** Every field is optional and they combine with AND. `since` and `until` bound `startedAt`, both inclusive. */
 export interface RunFilter {
-  gameProfileId?: string
+  gameProfileId?: GameProfileId
   mode?: RunMode
   sessionId?: string
   warmup?: boolean
@@ -33,11 +34,11 @@ export interface RunStore {
   /** Reset Finder markers (see `FinderResets`). They live beside the Runs, so an export carries them. */
   finderResets(): Promise<FinderResets>
   /** Resets the Finder of a Game Profile at `at`. A later marker already stored is kept, so a reset is never undone by an older one (an import). */
-  resetFinder(gameProfileId: string, at: number): Promise<void>
+  resetFinder(gameProfileId: GameProfileId, at: number): Promise<void>
 }
 
 /** Per Game Profile id, the time (`startedAt` scale) before which Finder Runs are left out of the fit (Reset Finder, #11). The Runs themselves stay. */
-export type FinderResets = Record<string, number>
+export type FinderResets = Partial<Record<GameProfileId, number>>
 
 export function packRun(record: RunRecord): { summary: RunSummary; body: RunBody } {
   const { input, targetEvents, ...summary } = record
@@ -65,9 +66,9 @@ export function selectRuns(all: readonly RunSummary[], f: RunFilter = {}): RunSu
 
 export function createMemoryStore(): RunStore {
   const runs = new Map<string, { summary: RunSummary; body: RunBody }>()
-  const resets = new Map<string, number>() // a Map: an id from an imported file may be "constructor" or "__proto__"
+  const resets = new Map<GameProfileId, number>()
   return {
-    finderResets: async () => Object.fromEntries(resets),
+    finderResets: async () => Object.fromEntries(resets) as FinderResets,
     async resetFinder(gameProfileId, at) {
       resets.set(gameProfileId, Math.max(at, resets.get(gameProfileId) ?? at))
     },

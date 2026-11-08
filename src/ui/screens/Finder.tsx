@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { finderRunsFor, fitFinder, getGameProfile, nextSession } from '../../core'
-import { rawInputLikelySupported } from '../../input/pointer'
+import { errorMessage } from '../../error-message'
+import { RAW_INPUT_BROWSERS, rawInputLikelySupported } from '../../input/pointer'
 import { runStore } from '../../storage/runs'
 import { newSeed } from '../defaults'
-import { centreOf, MIN_REST_SECONDS, newFinderSession, RAW_INPUT_BROWSERS, runRoute } from '../finder'
+import { centreOf, MIN_REST_SECONDS, newFinderSession, runRoute } from '../finder'
 import type { FinderSession } from '../finder'
 import { nextView } from '../finder-result'
 import type { ScreenProps } from '../routes'
@@ -29,7 +30,7 @@ export function Finder({ go }: ScreenProps<'finder'>) {
       return { session: newFinderSession(settings, newSeed(), crypto.randomUUID(), next), phase: nextView(next) }
     })().then(
       (result) => current && setPlanned(result),
-      (error: unknown) => current && setPlanned({ error: error instanceof Error ? error.message : String(error) }),
+      (error: unknown) => current && setPlanned({ error: errorMessage(error) }),
     )
     return () => {
       current = false

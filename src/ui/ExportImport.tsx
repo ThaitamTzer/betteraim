@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { exportData, ImportError, importData } from '../core'
+import { errorMessage } from '../error-message'
 import { runStore } from '../storage/runs'
-import { errorMessage } from './format'
 import { applyPlayerData, checkPlayerData, readPlayerData } from './player-data'
 
 type Notice = { kind: 'ok' | 'problem'; text: string }

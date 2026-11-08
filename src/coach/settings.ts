@@ -1,5 +1,5 @@
 import { createAnthropicProvider } from './anthropic'
-import { isLocalUrl } from './errors'
+import { failureMessage, isLocalUrl } from './errors'
 import { createOpenAiProvider } from './openai'
 import type { CoachProvider } from '../core'
 
@@ -70,6 +70,10 @@ export const saveCoachSettings = (settings: CoachSettings): void => {
 
 /** A pasted `/chat/completions` and trailing slashes are not part of the base URL. */
 export const normalizeBaseUrl = (url: string): string => url.trim().replace(/\/+$/, '').replace(/\/chat\/completions$/i, '')
+
+/** `failureMessage` for the connection these settings describe: its extra hint about a blocked permission applies to a local model server only. */
+export const coachFailureMessage = (error: unknown, s: CoachSettings): Promise<string> =>
+  failureMessage(error, s.provider === 'openai' && isLocalUrl(normalizeBaseUrl(s.openai.baseUrl)))
 
 /**
  * What is wrong with a base URL, or null. The Content Security Policy only lets `https:` through, plus `http:` to localhost and

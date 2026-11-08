@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { failureMessage, isLocalUrl } from '../coach/errors'
-import { baseUrlProblem, createCoachProvider, DEFAULT_ANTHROPIC_MODEL, loadCoachSettings, missingSetup, normalizeBaseUrl, saveCoachSettings } from '../coach/settings'
+import { baseUrlProblem, coachFailureMessage, createCoachProvider, DEFAULT_ANTHROPIC_MODEL, loadCoachSettings, missingSetup, normalizeBaseUrl, saveCoachSettings } from '../coach/settings'
 import type { CoachProviderId, CoachSettings } from '../coach/settings'
 import { Select } from './fields'
 import './coach.css'
@@ -64,7 +63,7 @@ export function CoachSection() {
       await provider.complete({ system: 'This is a connection test. Answer in as few words as possible.', prompt: 'Reply with the word OK.' })
       setTest({ state: 'ok' })
     } catch (error) {
-      setTest({ state: 'failed', message: await failureMessage(error, settings.provider === 'openai' && isLocalUrl(normalizeBaseUrl(openai.baseUrl))) })
+      setTest({ state: 'failed', message: await coachFailureMessage(error, settings) })
     }
   }
 

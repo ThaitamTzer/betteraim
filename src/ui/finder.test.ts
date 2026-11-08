@@ -3,7 +3,8 @@ import { cm360For, coarseLevels, fitFinder, getGameProfile, nextSession } from '
 import { testRecord } from '../core/testing/records'
 import { syntheticPlayer, syntheticRuns } from '../core/testing/synthetic'
 import { fmt } from './format'
-import { centreOf, MIN_REST_SECONDS, newFinderSession, RAW_INPUT_BROWSERS, runLabel, runRoute, sessionEnd, stepView } from './finder'
+import { RAW_INPUT_BROWSERS } from '../input/pointer'
+import { centreOf, MIN_REST_SECONDS, newFinderSession, runLabel, runRoute, sessionEnd, stepView } from './finder'
 import type { FinderStep } from './finder'
 
 const settings = { gameProfileId: 'valorant', gameSensitivity: 0.4, dpi: 800 } as const

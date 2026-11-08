@@ -37,7 +37,7 @@ const percent = (n: number) => `${n.toFixed(0)}%`
 const speed = (n: number) => `${Math.round(n)}°/s`
 
 /** Ahead/Behind as a magnitude and a word, read through the same dead zone as a Run: 0.40° Behind, Level. Never a minus sign. */
-const aheadBehind = (offset: number) => {
+export const aheadBehind = (offset: number): string => {
   const lead = leadOf(offset)
   return lead === 'level' ? 'Level' : `${Math.abs(offset).toFixed(2)}° ${lead === 'ahead' ? 'Ahead' : 'Behind'}`
 }

@@ -176,9 +176,6 @@ export function groupRuns(items: readonly AnalysedRun[], keyOf: (item: AnalysedR
   return [...partition([...items].sort(byTime), keyOf)].map(([key, runs]) => ({ key, runs, aggregate: aggregateRuns(runs) }))
 }
 
-/** One group per Session; Runs saved before Sessions existed share one group with key `undefined`. */
-export const bySession = (items: readonly AnalysedRun[]): RunGroup[] => groupRuns(items, (i) => i.run.sessionId)
-
 /**
  * One group per day. The core has no clock or time zone, so the shell says what day a start time falls on:
  * `dayOf` returns a label that sorts chronologically, such as the local date as YYYY-MM-DD.

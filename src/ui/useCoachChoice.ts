@@ -3,6 +3,7 @@ import { coachChoiceCache } from '../coach/choice-cache'
 import { coachModelId, createCoachProvider, loadCoachSettings, missingSetup } from '../coach/settings'
 import { cachedRecommendation, loadAnalysedRuns, recommendSensitivity } from '../core'
 import type { FinderFit, GameProfileId, Recommendation } from '../core'
+import { errorMessage } from '../error-message'
 import { runStore } from '../storage/runs'
 import { loadPlayerContext } from './player-context'
 import { analysisCache } from './useAnalysed'
@@ -88,7 +89,7 @@ export function useCoachChoice(fit: FinderFit | null, gameProfileId: GameProfile
         setState({ phase: 'idle' })
       } catch (error) {
         if (error === STALE) return
-        setState({ phase: 'failed', message: `Your Runs could not be analysed: ${error instanceof Error ? error.message : String(error)}` })
+        setState({ phase: 'failed', message: `Your Runs could not be analysed: ${errorMessage(error)}` })
       }
     })()
   }, [fit, canAsk, gameProfileId, context, settings])
