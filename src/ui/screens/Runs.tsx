@@ -4,6 +4,7 @@ import { runStore } from '../../storage/runs'
 import { ExportImport } from '../ExportImport'
 import { errorMessage } from '../format'
 import type { Go, ScreenProps } from '../routes'
+import { sensitivityText } from '../runs-view'
 import { formatScore } from '../score'
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
@@ -74,7 +75,7 @@ export function Runs({ go }: ScreenProps<'runs'>) {
                   <td>{new Date(r.startedAt).toLocaleString()}</td>
                   <td>{capitalize(r.scenario)}</td>
                   <td>{formatScore(r.scenario, r.score)}</td>
-                  <td>{r.sensitivity} cm/360</td>
+                  <td>{sensitivityText(r)}</td>
                   <td>
                     {capitalize(r.mode)}
                     {r.warmup && ', warm-up'}
