@@ -7,6 +7,8 @@ import { Options } from './screens/Options'
 import { Practice } from './screens/Practice'
 import { Result } from './screens/Result'
 import { RunScreen } from './screens/RunScreen'
+import { Runs } from './screens/Runs'
+import { StorageWarning } from './StorageWarning'
 import type { Go, Route, ScreenProps, Screens } from './routes'
 import './app.css'
 
@@ -18,6 +20,7 @@ const screens: Screens = {
   practice: Practice,
   run: RunScreen,
   result: Result,
+  runs: Runs,
 }
 
 export function App() {
@@ -33,11 +36,17 @@ export function App() {
           <button type="button" className="brand" onClick={() => go({ name: 'home' })}>
             BetterAim
           </button>
-          <button type="button" className="link" onClick={() => go({ name: 'options' })}>
-            Options
-          </button>
+          <nav className="topnav">
+            <button type="button" className="link" onClick={() => go({ name: 'runs' })}>
+              Past Runs
+            </button>
+            <button type="button" className="link" onClick={() => go({ name: 'options' })}>
+              Options
+            </button>
+          </nav>
         </header>
       )}
+      {route.name !== 'run' && <StorageWarning key={`storage-${key}`} />}
       <Screen key={key} route={route} go={go} />
     </>
   )

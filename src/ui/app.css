@@ -67,8 +67,8 @@ button:disabled {
 
 .topbar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   padding: 1rem 1.25rem;
 }
 
@@ -78,10 +78,17 @@ button:disabled {
   border: 0;
   background: none;
   color: var(--muted);
+  text-decoration: underline;
 }
 
-.link:hover:not(:disabled) {
+.link:hover {
   color: var(--text);
+}
+
+.storage-warning {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 0 1.25rem;
 }
 
 .brand {
@@ -273,6 +280,27 @@ button:disabled {
 
 .results .answer {
   color: var(--accent);
+  font-weight: 600;
+}
+
+/* Past Runs (the table sits in the Converter's .table-wrap) */
+.runs {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.runs th,
+.runs td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.runs th {
+  color: var(--muted);
   font-weight: 600;
 }
 
