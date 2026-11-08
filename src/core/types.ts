@@ -81,7 +81,7 @@ export interface RunMeta {
   gameProfileId: string
   mode: RunMode
   warmup: boolean
-  /** Absent for Practice Runs, which are not part of a Session. */
+  /** The sitting this Run belongs to (Finder and Practice both have one). Absent only in Runs saved before Practice had Sessions. */
   sessionId?: string
   /** The shell sets it on every Run; absent only in Runs imported from before it was captured. */
   env?: RunEnv
