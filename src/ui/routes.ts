@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import type { RunMeta, RunParams, RunRecord } from '../core'
+import type { Fov, RunMeta, RunParams, RunRecord } from '../core'
 
 /**
  * Every screen of the app. To add a screen: add a member here, a component in screens/, and one line to
@@ -7,6 +7,8 @@ import type { RunMeta, RunParams, RunRecord } from '../core'
  */
 export type Route =
   | { name: 'home' }
+  /** Scenario picker; a chosen Scenario is played as a Practice Run with these settings (from the active Game Profile). */
+  | { name: 'practice'; sensitivity: number; dpi: number; fov: Fov; gameProfileId: string }
   | {
       name: 'run'
       params: RunParams

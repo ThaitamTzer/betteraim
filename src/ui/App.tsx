@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ReactElement } from 'react'
 import { Home } from './screens/Home'
+import { Practice } from './screens/Practice'
 import { Result } from './screens/Result'
 import { RunScreen } from './screens/RunScreen'
 import type { Go, Route, ScreenProps, Screens } from './routes'
@@ -8,6 +9,7 @@ import './app.css'
 
 const screens: Screens = {
   home: Home,
+  practice: Practice,
   run: RunScreen,
   result: Result,
 }
