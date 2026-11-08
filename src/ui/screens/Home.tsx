@@ -52,9 +52,11 @@ export function Home({ go }: ScreenProps<'home'>) {
       </p>
 
       <div className="actions">
+        <button type="button" className="primary" onClick={() => go({ name: 'finder' })}>
+          Sensitivity Finder
+        </button>
         <button
           type="button"
-          className="primary"
           // Practice is the only place the FOV override applies; Finder Runs must use `profileFov(id)`.
           onClick={() =>
             go({ name: 'practice', sensitivity, dpi, fov: practiceFov(gameProfileId, loadPreferences().practiceFov), gameProfileId })

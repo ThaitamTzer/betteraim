@@ -96,6 +96,8 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
     const onLockChange = () => {
       if (document.pointerLockElement === canvas || !live.current) return
       live.current = null
+      const { route: r, go: navigate } = latest.current
+      if (r.session) return navigate(r.session.onAbandon) // a Finder Run: Resume or Quit Session
       setPlaying(false)
       setAbandoned(true)
     }
@@ -131,6 +133,12 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
       setProblem('The mouse could not be captured. Click again to retry.')
       return
     }
+    if (!rawInput && route.session) {
+      // Never record an accelerated Run as a Finder Run.
+      document.exitPointerLock()
+      go(route.session.onNotRaw)
+      return
+    }
     input.drain()
     const env = { devicePixelRatio: window.devicePixelRatio, userAgent: navigator.userAgent, rawInput }
     live.current = { run: createRun(route.params), origin: performance.now(), id: crypto.randomUUID(), startedAt: Date.now(), env }
@@ -138,7 +146,16 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
     setPlaying(true)
   }
 
-  const warnRaw = raw === null ? !rawInputLikelySupported() : !raw
+  // The player's click on the screen before this one gives the activation, so a Finder Run starts at once. The card stays as
+  // the fallback when the lock is refused. A timer, not a bare call: Strict Mode runs the effects twice in development.
+  useEffect(() => {
+    if (!route.session) return
+    const timer = setTimeout(() => void start(), 0)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // A Finder Run never plays without raw input, so the Practice warning (which says you can still play) does not apply.
+  const warnRaw = !route.session && (raw === null ? !rawInputLikelySupported() : !raw)
   const warning = (
     <p className="warning" role="status">
       Raw mouse input is not available in this browser, so the OS may accelerate your mouse and distort results. Use
@@ -169,7 +186,7 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
       {!playing && (
         <div className="overlay">
           <div className="card">
-            <p className="eyebrow">{name}</p>
+            <p className="eyebrow">{route.session ? `${route.session.label} · ${name}` : name}</p>
             <h1>{abandoned ? 'Run abandoned' : 'Click to start'}</h1>
             <p>
               {abandoned
@@ -187,7 +204,7 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation()
-                  go({ name: 'home' })
+                  go(route.session ? route.session.onAbandon : { name: 'home' })
                 }}
               >
                 Back
