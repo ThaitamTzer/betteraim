@@ -8,9 +8,9 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 - `run.ts` the engine: `createRun(params)`, `replay`. `scenario.ts` what a Scenario implements (`Rules`).
 - `scenarios/` `clicking.ts` (shared by Flick and Micro), `flick.ts`, `micro.ts`, `strafe.ts`, `switch.ts`, `wander.ts` (target motion
   for the Tracking Scenarios), `index.ts` (the registry, one line per Scenario).
-- `analysis/` `analyseRun(run)`: Run Analysis, a union on Scenario category. Clicking (#7) is implemented, `tracking` is a stub for
-  #8. It replays `input` to rebuild the crosshair path, so a `RunRecord` is all it needs. `clicking.ts` Aim Movements, Ideal Path and
-  classification; `velocity.ts` smoothing, peaks and the thresholds (read its header before changing one).
+- `analysis/` `analyseRun(run)`: Run Analysis, a union on Scenario category. It replays `input` to rebuild the crosshair path, so a
+  `RunRecord` is all it needs. `clicking.ts` Aim Movements, Ideal Path and classification (#7); `tracking.ts` Ahead/Behind, Time on
+  Target and mouse speed (#8, see Tracking Scenarios); `velocity.ts` smoothing, peaks and the thresholds (read its header before changing one).
 - `rng.ts` `createRng(seed)`. `tally.ts` `tallyShots`. `testing/` bots and test params (tests only).
 - `codec.ts` lossless binary form of `input` and `targetEvents` (+ base64). `storage.ts` the `RunStore` port (`save`, `list(filter)`
   summaries, `get`) and `createMemoryStore()` for tests. `exchange.ts` `exportData`/`importData`: one versioned JSON file, validated
@@ -20,7 +20,7 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   value with its source), the Game Sensitivity <-> cm/360 formulas, the Converter (`convertSensitivity`, `readSensitivity`) and
   `profileFov(id)`, the `Fov` a Run renders with (always vertical, so a horizontal FOV on a 4:3 or 16:9 base is Hor+). `practiceFov(id, override)` is the Practice-only variant (Options' FOV override); the Sensitivity Finder must call `profileFov(id)`.
   A Game Profile id (`GameProfileId`) is what `RunMeta.gameProfileId` holds. Add a game by adding one entry to the table.
-- Not here yet: Tracking Analysis (#8), Finder (#9-#11), AI Coach (#14, #15).
+- Not here yet: Finder (#9-#11), AI Coach (#14, #15).
 
 ## Conventions
 - Units: degrees, ms since Run start, Sensitivity = cm/360. Yaw > 0 is right, pitch > 0 is up (crosshair pitch is clamped to
@@ -62,6 +62,21 @@ replaySteps(record, record.input, ({ crosshair, held, targets }) => {
   Signed offset along the direction of travel: take the crosshair's offset from the target in the target's local
   east/north (east = `wrapDeg(dyaw) * cos(pitch)`, north = `dpitch`) and project it on `(sin heading, cos heading)`.
   Positive is Ahead, negative is Behind. Summing the on-target steps and dividing by 30 000 gives Strafe's Score back exactly.
+  One exception to "what `Rules.step` saw": at the step where a Switch target falls, the state already shows its replacement, so
+  the on-target test misses that ms. A `kill` event stamped at that step means it was on target (`analysis/tracking.ts` adds it).
+- **Tracking Analysis (ticket #8):** `analyseRun` of a Strafe or Switch Run gives a `TrackingAnalysis`, read from one `replaySteps` pass.
+  - `meanOffset` is Ahead/Behind: the mean signed offset in degrees of the crosshair from the target along its direction of travel
+    (> 0 Ahead, < 0 Behind), never named Overshoot or Undershoot (those are Aim Movement outcomes). `lead` (`'ahead' | 'behind' |
+    'level'`, not `'on-target'`) is `leadOf(meanOffset)`: a dead zone of 0.25 degrees (an eighth of the target radius) around 0 is level.
+  - Which steps are sampled (`samples`): fire held, crosshair within 3 target radii of the nearest target, inside that window for 50 ms
+    before and after the step (so the ends of a Switch flick are left out), target speed at least 2 deg/s. The reasoning and
+    the measured numbers are in the header of `analysis/tracking.ts`. The window is wider than the radius on purpose: a
+    laggard is outside the radius.
+  - `timeOnTargetMs` and `timeOnTargetShare` (0 to 1) follow the Score rule exactly (fire held and crosshair within the radius), so
+    `timeOnTargetShare * 100` is Strafe's Score and a Switch Run has at least 400 ms per fall. `mouseSpeed` is the smoothed crosshair
+    speed in deg/s over the sampled steps (signed components smoothed, see `velocity.ts`).
+  - Pooling several Runs: `meanOffset` and `mouseSpeed` weighted by `samples` (zero-sample Runs add nothing; guard 0 / 0), time on target
+    as the sum of `timeOnTargetMs` over 30 000 ms per Run, and `leadOf` on the pooled mean so the dead zone stays in one place.
 
 ## Adding a Scenario
 Implement `ScenarioDefinition` (`rules(seed)` returns `Rules`: `targets`, `events`, `score`, plus `shoot` for Clicking and
@@ -85,7 +100,7 @@ const lagging: Bot = (s) => {
 ```
 Overshoot, undershoot and reaction time are covered in `testing/bots.test.ts`. `lineBot({ bursts, burstMs, pauseMs, bow })` follows
 the great circle to the target (`aimBot` interpolates in yaw/pitch, so it drifts off the Ideal Path): one push is smooth, several
-are jerky, `bow` bends it sideways. Analysis tests (`analysis/clicking.test.ts`) run bots at several Sensitivity/DPI settings.
+are jerky, `bow` bends it sideways. Analysis tests (`analysis/clicking.test.ts`, `analysis/tracking.test.ts`) run bots at several Sensitivity/DPI settings.
 
 `trackBot({ leadMs })` is the Tracking bot: it holds fire and keeps the crosshair on the first of `state.targets`, staying on that
 target until it is gone. `leadMs` aims that many ms of the target's travel ahead of it (> 0, Ahead) or behind it (< 0, Behind);
