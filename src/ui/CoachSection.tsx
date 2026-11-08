@@ -155,14 +155,15 @@ export function CoachSection() {
           </li>
           <li>Use Chrome, Edge or Firefox. Safari does not let a web page call <code>http://localhost</code>.</li>
           <li>
-            Press <strong>Test connection</strong>. Chrome asks "Access other apps and services on this device": choose <strong>Allow</strong>. If you blocked it before: lock icon,
-            Site settings, <strong>Apps on device</strong>, Allow (Chrome 142 to 144 call it "Local network access"), then reload.
+            Press <strong>Test connection</strong>. Chrome asks whether this site may reach other apps and services on this device (Chrome 142 to 144 word it as a local network
+            permission): choose <strong>Allow</strong>. If you blocked it before: lock icon, Site settings, set <strong>Loopback network</strong> to Allow, then reload. Some
+            versions label that setting "Apps on device" (Chrome 142 to 144: "Local network access"); the wording varies by version.
           </li>
           <li>Use <code>localhost</code> or <code>127.0.0.1</code>, not an address on your network and not <code>[::1]</code>.</li>
         </ol>
         <p>If it still fails, check in this order: the server is running, the model name is right, this website is allowed (step 2), the browser permission (step 4).</p>
         <p>
-          Checked on 2026-11-08 in Chrome 156 against Chrome's{' '}
+          Checked on 2026-11-08, with a test in Chrome 156 and Chrome's{' '}
           <a href="https://developer.chrome.com/docs/modern-web-guidance/guides/security/local-network-access" target="_blank" rel="noreferrer noopener">Local Network Access guide</a>. Since Chrome 142 a
           public web page needs your permission to call <code>localhost</code>. Calling plain http on localhost from an https page is not blocked as mixed content, and the server needs
           normal CORS only. Browsers change this; if Chrome behaves differently, its guide is the reference.

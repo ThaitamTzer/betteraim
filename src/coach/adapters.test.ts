@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { createAnthropicProvider } from './anthropic'
 import { createOpenAiProvider } from './openai'
 
@@ -23,6 +23,8 @@ const ask = { system: 'be brief', prompt: 'hello' }
 const schema = { type: 'object', properties: { a: { type: 'number' } }, required: ['a'], additionalProperties: false }
 
 describe('Anthropic adapter', () => {
+  // The adapter imports the SDK on first use; under load that import alone can outlast a test's 5 s.
+  beforeAll(() => import('@anthropic-ai/sdk'), 60_000)
   const message = (content: unknown[], stop_reason = 'end_turn', extra: object = {}) =>
     json({ id: 'msg_1', type: 'message', role: 'assistant', model: 'claude-opus-5-5', content, stop_reason, stop_details: null, usage: { input_tokens: 1, output_tokens: 1 }, ...extra })
   const provider = (f: ReturnType<typeof fakeFetch>, model = 'claude-opus-5-5') => createAnthropicProvider({ apiKey: 'sk-ant-test', model }, f.fetchImpl)
@@ -146,7 +148,7 @@ describe('OpenAI-compatible adapter', () => {
   it('explains the local-model causes when a localhost server cannot be reached', async () => {
     const failure = await provider(fakeFetch(new TypeError('Failed to fetch'))).complete(ask).catch((e: unknown) => e)
     expect(failure).toMatchObject({ kind: 'network' })
-    for (const hint of ['OLLAMA_ORIGINS', 'Enable CORS', 'Apps on device']) expect((failure as Error).message).toContain(hint)
+    for (const hint of ['OLLAMA_ORIGINS', 'Enable CORS', 'Loopback network', 'Apps on device']) expect((failure as Error).message).toContain(hint)
   })
 
   it('keeps the local-model advice out of the error for a remote endpoint', async () => {
