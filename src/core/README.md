@@ -20,6 +20,10 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   value with its source), the Game Sensitivity <-> cm/360 formulas, the Converter (`convertSensitivity`, `readSensitivity`) and
   `profileFov(id)`, the `Fov` a Run renders with (always vertical, so a horizontal FOV on a 4:3 or 16:9 base is Hor+). `practiceFov(id, override)` is the Practice-only variant (Options' FOV override); the Sensitivity Finder must call `profileFov(id)`.
   A Game Profile id (`GameProfileId`) is what `RunMeta.gameProfileId` holds. Add a game by adding one entry to the table.
+- `aggregate.ts` pure aggregators over `AnalysedRun = { run: RunSummary, analysis: RunAnalysis }`: `aggregateRuns(items)` pools per Scenario
+  (rates recomputed from pooled counts, Warm-up Runs only counted in `warmups`), `groupRuns(items, keyOf)` for any grouping, with `bySession`
+  and `byDay(items, dayOf)` on top (the shell supplies `dayOf`: the core has no time zone). `loadAnalysed(store, filter, cache?)` lists, loads and
+  analyses Runs (about 100 ms per Run: pass a `Map` cache when you load more than once). `poolTracking` pools `TrackingMetrics` (= `TrackingAnalysis`) by sample count and Run length. Ticket #14/#15 reuse it on their own groupings.
 - Not here yet: Finder (#9-#11), AI Coach (#14, #15).
 
 ## Conventions
@@ -30,7 +34,7 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   at or after 30 000 ms ends the Run and is dropped. `state()` is live; `result()` (input, target events, Score) needs `done`.
 - Simulated time advances in 1 ms steps (`Rules.step`) whatever the tick rate; ticks are not stored in a record.
 - A persisted Run is `RunRecord = { ...params, ...meta, ...run.result() }`. The core never makes ids or reads a clock: the
-  shell supplies `RunMeta` (`id`, `startedAt`, `gameProfileId`, `mode`, `warmup`, `sessionId`, absent in Practice, and `env`, absent only in old imports). `env` is the capture
+  shell supplies `RunMeta` (`id`, `startedAt`, `gameProfileId`, `mode`, `warmup`, `sessionId`, absent only in Runs saved before Practice had Sessions, and `env`, absent only in old imports). `env` is the capture
   environment (`devicePixelRatio`, `userAgent`, `rawInput`): `movementX/Y` units differ per browser, so old Runs need it to be re-analysed.
 - Storage: `list` returns summaries (no input), `get` the whole record. Importing never deletes; a Run with a known id is replaced.
 - Target log: `spawn` (with the crosshair at spawn), `shot` (`id` or `null` for a miss), `kill`. Replaying the input with
@@ -75,8 +79,9 @@ replaySteps(record, record.input, ({ crosshair, held, targets }) => {
   - `timeOnTargetMs` and `timeOnTargetShare` (0 to 1) follow the Score rule exactly (fire held and crosshair within the radius), so
     `timeOnTargetShare * 100` is Strafe's Score and a Switch Run has at least 400 ms per fall. `mouseSpeed` is the smoothed crosshair
     speed in deg/s over the sampled steps (signed components smoothed, see `velocity.ts`).
-  - Pooling several Runs: `meanOffset` and `mouseSpeed` weighted by `samples` (zero-sample Runs add nothing; guard 0 / 0), time on target
-    as the sum of `timeOnTargetMs` over 30 000 ms per Run, and `leadOf` on the pooled mean so the dead zone stays in one place.
+  - Pooling several Runs (`aggregate.ts` `poolTracking`, shown on the Session summary and History): `meanOffset` and `mouseSpeed` weighted by
+    `samples` (a zero-sample Run adds nothing), time on target as the sum of `timeOnTargetMs` over 30 000 ms per Run, and `leadOf` on the
+    pooled mean so the dead zone stays in one place.
 
 ## Adding a Scenario
 Implement `ScenarioDefinition` (`rules(seed)` returns `Rules`: `targets`, `events`, `score`, plus `shoot` for Clicking and
