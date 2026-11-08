@@ -5,6 +5,8 @@ import type { Aim, ScenarioId, Target, TargetEvent } from '../types'
 
 export interface ClickingParams {
   id: ScenarioId
+  name: string
+  description: string
   /** Distance range of each new target from the crosshair, in degrees. */
   minDeg: number
   maxDeg: number
@@ -20,6 +22,8 @@ const MAX_SPAWN_PITCH = 40
 export const createClickingScenario = (p: ClickingParams): ScenarioDefinition => ({
   id: p.id,
   category: 'clicking',
+  name: p.name,
+  description: p.description,
   rules(seed): Rules {
     const rng = createRng(seed)
     const events: TargetEvent[] = []
