@@ -6,6 +6,7 @@ import { captureInput, lockPointer, rawInputLikelySupported } from '../../input/
 import { createScene } from '../../render/scene'
 import { saveRun } from '../../storage/runs'
 import { Crosshair } from '../Crosshair'
+import { RAW_INPUT_BROWSERS } from '../finder'
 import { loadPreferences } from '../preferences'
 import type { ScreenProps } from '../routes'
 import { formatScore, trackingRule } from '../score'
@@ -158,8 +159,8 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
   const warnRaw = !route.session && (raw === null ? !rawInputLikelySupported() : !raw)
   const warning = (
     <p className="warning" role="status">
-      Raw mouse input is not available in this browser, so the OS may accelerate your mouse and distort results. Use
-      Chrome, Edge or another Chromium browser for accurate Sensitivity. You can still play.
+      Raw mouse input is not available in this browser, so the OS may accelerate your mouse and distort results. Raw input
+      works in: {RAW_INPUT_BROWSERS} You can still play.
     </p>
   )
   const name = route.params.scenario.charAt(0).toUpperCase() + route.params.scenario.slice(1)

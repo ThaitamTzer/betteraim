@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { cm360For, degreesPerCount, eDpi, getGameProfile, practiceFov } from '../../core'
 import { rawInputLikelySupported } from '../../input/pointer'
+import { RAW_INPUT_BROWSERS } from '../finder'
 import { fmt } from '../format'
 import type { ScreenProps } from '../routes'
 import { loadPreferences } from '../preferences'
@@ -27,8 +28,8 @@ export function Home({ go }: ScreenProps<'home'>) {
 
       {!rawInputLikelySupported() && (
         <p className="warning" role="status">
-          This browser may not give raw mouse input, so the OS can accelerate your mouse and distort results. Chrome, Edge
-          and other Chromium browsers support raw input. You can still play.
+          This browser may not give raw mouse input, so the OS can accelerate your mouse and distort results. Raw input works
+          in: {RAW_INPUT_BROWSERS} You can still play.
         </p>
       )}
 
