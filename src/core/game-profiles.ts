@@ -169,3 +169,12 @@ export const profileFov = (id: GameProfileId): Fov => {
   const degrees = fov.axis === 'vertical' ? fov.degrees : verticalFovDeg({ degrees: fov.degrees, axis: 'horizontal' }, ASPECT[fov.base])
   return { degrees, axis: 'vertical' }
 }
+
+/**
+ * Practice only: the player's own FOV from Options (`horizontal` degrees on a 16:9 screen) when set, else `profileFov(id)`.
+ * The Sensitivity Finder (#9) must call `profileFov(id)` directly and never this, so every Finder Run uses the Game Profile FOV.
+ */
+export const practiceFov = (id: GameProfileId, horizontal?: number | null): Fov =>
+  horizontal == null
+    ? profileFov(id)
+    : { degrees: verticalFovDeg({ degrees: horizontal, axis: 'horizontal' }, ASPECT['16:9']), axis: 'vertical' }
