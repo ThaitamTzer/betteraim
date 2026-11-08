@@ -16,19 +16,26 @@ export interface AnalysedRun {
 /**
  * Loads the Runs the filter selects and analyses each from its stored input (raw data is the source of truth, so nothing
  * derived is ever stored).
- * shortcut: every call replays every Run it loads (about a few ms each) and caches nothing, fine for hundreds of Runs;
- * cache the Analysis by Run id and analyser version when History gets slow.
+ * shortcut: an Analysis costs about 100 ms per Run (a 30 s Run at a 1 kHz mouse), so a caller that loads often passes a `cache`
+ * (Run id to Analysis, filled here; Runs never change under an id, an import of the same id carries the same data). Nothing
+ * is persisted: the first History after a page load pays for every Run. Persist the Analysis next to the Run, or speed up
+ * `analyseRun`, when that gets slow.
  */
-export async function loadAnalysed(store: RunStore, filter?: RunFilter): Promise<AnalysedRun[]> {
+export async function loadAnalysed(store: RunStore, filter?: RunFilter, cache = new Map<string, RunAnalysis>()): Promise<AnalysedRun[]> {
   const items: AnalysedRun[] = []
   for (const run of await store.list(filter)) {
-    const record = await store.get(run.id)
-    if (!record) continue // deleted between the list and the get
-    try {
-      items.push({ run, analysis: analyseRun(record) })
-    } catch {
-      // A Run of a Scenario this build does not know (imported from a newer one): it cannot be analysed, so it is not shown.
+    let analysis = cache.get(run.id)
+    if (!analysis) {
+      const record = await store.get(run.id)
+      if (!record) continue // deleted between the list and the get
+      try {
+        analysis = analyseRun(record)
+      } catch {
+        continue // A Run of a Scenario this build does not know (imported from a newer one): it cannot be analysed, so it is not shown.
+      }
+      cache.set(run.id, analysis)
     }
+    items.push({ run, analysis })
   }
   return items
 }

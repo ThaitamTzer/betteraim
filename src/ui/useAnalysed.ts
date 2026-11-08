@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { loadAnalysed } from '../core'
-import type { AnalysedRun } from '../core'
+import type { AnalysedRun, RunAnalysis } from '../core'
 import { runStore } from '../storage/runs'
+
+// Kept for the life of the page: History and every Session summary reuse the Analyses already made.
+const cache = new Map<string, RunAnalysis>()
 
 export type Loaded = { items: AnalysedRun[] } | { error: string } | null
 
@@ -11,7 +14,7 @@ export function useAnalysed(sessionId?: string): Loaded {
   useEffect(() => {
     let current = true
     runStore()
-      .then((store) => loadAnalysed(store, sessionId === undefined ? undefined : { sessionId }))
+      .then((store) => loadAnalysed(store, sessionId === undefined ? undefined : { sessionId }, cache))
       .then(
         (items) => current && setLoaded({ items }),
         (error: unknown) => current && setLoaded({ error: error instanceof Error ? error.message : String(error) }),

@@ -158,6 +158,18 @@ describe('grouping Runs', () => {
 })
 
 describe('loading analysed Runs', () => {
+  it('analyses a Run once when given a cache, and not at all for a Run already in it', async () => {
+    const inner = createMemoryStore()
+    await inner.save([clean(), sloppy()])
+    let loads = 0
+    const store = { ...inner, get: (id: string) => (loads++, inner.get(id)) }
+    const cache = new Map()
+    const first = await loadAnalysed(store, undefined, cache)
+    expect(loads).toBe(2)
+    expect(await loadAnalysed(store, undefined, cache)).toEqual(first)
+    expect(loads).toBe(2)
+  })
+
   it('filters like the store does and skips a Run whose Scenario this build does not know', async () => {
     const store = createMemoryStore()
     await store.save([

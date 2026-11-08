@@ -14,7 +14,7 @@ const chartGroups = [['accuracy'], ['overshootRate', 'undershootRate'], ['pathDe
 
 export function History({ go }: ScreenProps<'history'>) {
   const loaded = useAnalysed()
-  if (!loaded) return <main className="page wide"><p className="lede">Loading your Runs...</p></main>
+  if (!loaded) return <main className="page wide"><p className="lede">Analysing your Runs. This can take a few seconds the first time.</p></main>
   if ('error' in loaded) {
     return (
       <main className="page wide">
