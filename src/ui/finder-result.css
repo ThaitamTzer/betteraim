@@ -1,0 +1,17 @@
+/* Finder result: the one line that says how sure the curve is. */
+.result-message {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--muted);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.result-message.enough {
+  border-left-color: var(--accent);
+}
+
+.chart-block .chart + .hint {
+  margin-top: 0.5rem;
+}

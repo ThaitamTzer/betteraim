@@ -32,12 +32,13 @@ describe('a Finder Session', () => {
     expect(runRoute(session(1)).meta.warmup).toBe(true)
   })
 
-  it('chains Run to rest to next Run, and ends with the Session complete step', () => {
+  it('chains Run to rest to next Run, and ends on the Finder result, waiting for the last Run to be saved', () => {
     const next = runRoute(session(4)).next(testRecord())
     expect(next).toMatchObject({ name: 'finderSession', step: 'rest', session: { done: 5 } })
-    const last = runRoute(session(15)).next(testRecord())
-    expect(last).toEqual(sessionEnd({ ...session(15), done: 16 }))
-    expect(last).toMatchObject({ name: 'finderSession', step: 'complete', session: { done: 16 } })
+    const record = testRecord({}, { id: 'last-run' })
+    const last = runRoute(session(15)).next(record)
+    expect(last).toEqual(sessionEnd({ ...session(15), done: 16 }, record))
+    expect(last).toEqual({ name: 'finderResult', gameProfileId: 'valorant', dpi: 800, sessionId: 'session-a', saving: 'last-run' })
   })
 
   it('returns to a screen of the Session when a Run is abandoned or the lock is not raw', () => {
