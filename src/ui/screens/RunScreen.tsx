@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { createRun, RUN_DURATION_MS } from '../../core'
+import { angleBetween, createRun, getScenario, RUN_DURATION_MS } from '../../core'
 import type { Run, RunEnv, RunRecord } from '../../core'
 import { createHitSound, targetGone } from '../../audio/hit-sound'
 import { captureInput, lockPointer, rawInputLikelySupported } from '../../input/pointer'
@@ -8,6 +8,7 @@ import { saveRun } from '../../storage/runs'
 import { Crosshair } from '../Crosshair'
 import { loadPreferences } from '../preferences'
 import type { ScreenProps } from '../routes'
+import { formatScore, trackingRule } from '../score'
 
 interface Live {
   run: Run
@@ -21,6 +22,7 @@ interface Live {
 export function RunScreen({ route, go }: ScreenProps<'run'>) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const arrowRef = useRef<HTMLDivElement>(null)
+  const onTargetRef = useRef<HTMLDivElement>(null)
   const timeRef = useRef<HTMLElement>(null)
   const scoreRef = useRef<HTMLElement>(null)
   const inputRef = useRef<ReturnType<typeof captureInput> | null>(null)
@@ -50,6 +52,8 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
     }
     const input = captureInput(prefs.fireButton)
     inputRef.current = input
+    const { scenario } = latest.current.route.params
+    const tracking = getScenario(scenario).category === 'tracking'
     const idle = createRun(latest.current.route.params).state()
 
     const finish = (l: Live) => {
@@ -72,7 +76,11 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
         if (prefs.hitSound.on && targetGone(aliveBefore, state.targets)) sound.play(prefs.hitSound.volume)
         aliveBefore = state.targets.map((t) => t.id)
         if (timeRef.current) timeRef.current.textContent = Math.max(0, (RUN_DURATION_MS - state.t) / 1000).toFixed(1)
-        if (scoreRef.current) scoreRef.current.textContent = state.score.toFixed(1)
+        if (scoreRef.current) scoreRef.current.textContent = formatScore(scenario, state.score)
+        // Tracking is about staying on target, so a ring shows while the crosshair is on one (fire still has to be held to score).
+        if (onTargetRef.current) {
+          onTargetRef.current.hidden = !(tracking && state.targets.some((t) => angleBetween(state.crosshair, t) <= t.radius))
+        }
         scene.draw(state)
         if (state.done) finish(l)
       } else {
@@ -146,6 +154,7 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
       {playing && (
         <>
           <Crosshair crosshair={prefs.crosshair} />
+          <div ref={onTargetRef} className="on-target-ring" aria-hidden="true" hidden />
           <div className="hud">
             <span>
               Time <b ref={timeRef}>30.0</b>
@@ -167,6 +176,7 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
                 ? 'Nothing was kept. Click to try again.'
                 : 'Clicking captures your mouse and starts the 30 second timer. Press Escape to release it and abandon the Run.'}
             </p>
+            {trackingRule[route.params.scenario] && <p>{trackingRule[route.params.scenario]}</p>}
             {warnRaw && warning}
             {problem && <p className="warning" role="alert">{problem}</p>}
             <div className="actions">

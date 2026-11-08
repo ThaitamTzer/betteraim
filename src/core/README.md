@@ -6,7 +6,8 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 ## Layout
 - `types.ts` shared types. `aim.ts` degrees per count, sphere geometry (`angleBetween`, `offsetAim`, `aimDelta`), FOV.
 - `run.ts` the engine: `createRun(params)`, `replay`. `scenario.ts` what a Scenario implements (`Rules`).
-- `scenarios/` `clicking.ts` (shared by Flick and Micro), `flick.ts`, `micro.ts`, `index.ts` (the registry, one line per Scenario).
+- `scenarios/` `clicking.ts` (shared by Flick and Micro), `flick.ts`, `micro.ts`, `strafe.ts`, `switch.ts`, `wander.ts` (target motion
+  for the Tracking Scenarios), `index.ts` (the registry, one line per Scenario).
 - `analysis/` `analyseRun(run)`: Run Analysis, a union on Scenario category. Clicking (#7) is implemented, `tracking` is a stub for
   #8. It replays `input` to rebuild the crosshair path, so a `RunRecord` is all it needs. `clicking.ts` Aim Movements, Ideal Path and
   classification; `velocity.ts` smoothing, peaks and the thresholds (read its header before changing one).
@@ -33,7 +34,34 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   environment (`devicePixelRatio`, `userAgent`, `rawInput`): `movementX/Y` units differ per browser, so old Runs need it to be re-analysed.
 - Storage: `list` returns summaries (no input), `get` the whole record. Importing never deletes; a Run with a known id is replaced.
 - Target log: `spawn` (with the crosshair at spawn), `shot` (`id` or `null` for a miss), `kill`. Replaying the input with
-  `replay(params, input)` rebuilds targets over time for Analysis; no motion samples are logged.
+  `replay(params, input)` returns the result again; `replaySteps` (see Tracking Scenarios) gives the targets and crosshair at every ms for Analysis. No motion samples are logged.
+
+## Tracking Scenarios (Strafe, Switch)
+- **On-target rule (both):** 1 ms of simulated time counts as on target only while the fire button is held AND the crosshair
+  is within the target's `radius`. Holding fire elsewhere, or tracking without firing, earns nothing.
+- **Strafe:** one target, `Score` = 100 x (on-target ms) / (ms elapsed), so it is a live percentage that is final at 30 s.
+  **Switch:** three targets alive; a target falls (`kill`, then a replacement `spawn` at the same `t`) once it has 400 ms
+  on target in total. The time is summed per target and kept when the crosshair looks away and comes back. `Score` = falls
+  (at most 75). There are four spots 24 degrees apart in yaw, three of them taken: the replacement goes to the free one, and
+  the spot it fell from becomes the free one. So it never reappears where it fell and the player has to switch.
+- **Motion** is closed-form in time (`scenarios/wander.ts`: sums of sines, periods and phases from the seed), defined in
+  degrees and independent of FOV, Sensitivity, DPI and input. Strafe stays within 24 degrees yaw / 5 pitch of the start
+  and peaks near 40 degrees per second; Switch targets drift at up to about 12 degrees per second.
+- **Reading the path (ticket #8, Ahead/Behind):** every moving `Target` in `RunState.targets` carries `speed` (degrees per
+  second on the sphere) and `heading` (direction of travel as a bearing, 0 = up, 90 = right, the `offsetAim` convention); `RunState.held`
+  is the fire button. The target log only holds `spawn` and `kill` (no `shot`, no motion samples), so get the path from the `RunRecord`
+  by replay: `replaySteps(record, record.input, (state) => ...)` calls back for every simulated step t = 1 ... 30 000 ms with
+  exactly what `Rules.step` saw then (targets at t; crosshair and `held` as the input before t left them). Use it, do not hand-roll
+  a tick-then-events loop: recorded times are fractional (an event at 12.4 ms takes effect from step 13), and applying them a step
+  early or late moves Switch kills and everything after them. This order is a contract the replay depends on.
+```ts
+replaySteps(record, record.input, ({ crosshair, held, targets }) => {
+  // per ms: targets[i] has yaw, pitch, radius, speed, heading; on target = held && angleBetween(crosshair, targets[i]) <= radius
+})
+```
+  Signed offset along the direction of travel: take the crosshair's offset from the target in the target's local
+  east/north (east = `wrapDeg(dyaw) * cos(pitch)`, north = `dpitch`) and project it on `(sin heading, cos heading)`.
+  Positive is Ahead, negative is Behind. Summing the on-target steps and dividing by 30 000 gives Strafe's Score back exactly.
 
 ## Adding a Scenario
 Implement `ScenarioDefinition` (`rules(seed)` returns `Rules`: `targets`, `events`, `score`, plus `shoot` for Clicking and
@@ -58,6 +86,10 @@ const lagging: Bot = (s) => {
 Overshoot, undershoot and reaction time are covered in `testing/bots.test.ts`. `lineBot({ bursts, burstMs, pauseMs, bow })` follows
 the great circle to the target (`aimBot` interpolates in yaw/pitch, so it drifts off the Ideal Path): one push is smooth, several
 are jerky, `bow` bends it sideways. Analysis tests (`analysis/clicking.test.ts`) run bots at several Sensitivity/DPI settings.
+
+`trackBot({ leadMs })` is the Tracking bot: it holds fire and keeps the crosshair on the first of `state.targets`, staying on that
+target until it is gone. `leadMs` aims that many ms of the target's travel ahead of it (> 0, Ahead) or behind it (< 0, Behind);
+0 is dead on. Build a leading or lagging bot with `trackBot({ leadMs: 100 })` / `trackBot({ leadMs: -100 })`.
 
 ## Determinism rules
 - Randomness only from `createRng(seed)`, with a number of draws that does not depend on input (Finder Runs share a seed
