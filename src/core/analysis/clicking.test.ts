@@ -113,6 +113,29 @@ describe.each(setups)('Mouse speed at $sensitivity cm/360, $dpi DPI', (setup) =>
   })
 })
 
+describe('Micro (any Clicking Scenario is analysed through its category)', () => {
+  const micro = { scenario: 'micro' } as const
+
+  it('has a perfect bot on-target and smooth', () => {
+    const { analysis } = analyse(aimBot(), micro)
+    expect(analysis.movementCount).toBeGreaterThan(50)
+    expect(analysis.movements.filter((m) => m.outcome !== 'on-target')).toEqual([])
+    expect(analysis.smoothness).toBeCloseTo(1, 1)
+  })
+
+  // Targets 2 to 10 degrees away with a 0.75 degree radius: a 30% error clears the edge by 0.3 x distance - 0.75, so only
+  // movements well beyond 4 degrees are judged here.
+  it.each([
+    ['overshoots', 1.3, 'overshoot'],
+    ['stops short', 0.7, 'undershoot'],
+  ] as const)('classifies a bot that %s', (_, gain, outcome) => {
+    const { analysis } = analyse(aimBot({ gain }), micro)
+    const far = analysis.movements.filter((m) => m.idealDistance > 4)
+    expect(far.length).toBeGreaterThan(20)
+    expect(far.filter((m) => m.outcome !== outcome)).toEqual([])
+  })
+})
+
 describe('an Aim Movement too slow to have any velocity peak', () => {
   it('has no Primary Submovement to misjudge: it is on-target because it hit', () => {
     // 25 s to cover 10 to 60 degrees is under 5 degrees per second all the way
