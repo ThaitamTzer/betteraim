@@ -3,7 +3,7 @@ import { cm360For, coarseLevels, fitFinder, getGameProfile, nextSession } from '
 import { testRecord } from '../core/testing/records'
 import { syntheticPlayer, syntheticRuns } from '../core/testing/synthetic'
 import { fmt } from './format'
-import { RAW_INPUT_BROWSERS } from '../input/pointer'
+import { RAW_INPUT_BROWSERS, RAW_INPUT_CAVEAT } from '../input/pointer'
 import { centreOf, MIN_REST_SECONDS, newFinderSession, runLabel, runRoute, sessionEnd, stepView } from './finder'
 import type { FinderStep } from './finder'
 
@@ -91,6 +91,7 @@ describe('the raw input explanation', () => {
     const text = stepView(session(0), 'notRaw').lines.join(' ')
     for (const name of ['Chrome', 'Edge', 'Firefox', 'Safari']) expect(RAW_INPUT_BROWSERS).toContain(name)
     expect(text).toContain(RAW_INPUT_BROWSERS)
+    expect(text).toContain(RAW_INPUT_CAVEAT) // Firefox and Safari: the shown cm/360 may be scaled; Chromium is the verified path
     expect(text).toContain('Practice')
   })
 })

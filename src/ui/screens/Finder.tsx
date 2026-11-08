@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { finderRunsFor, fitFinder, getGameProfile, nextSession } from '../../core'
 import { errorMessage } from '../../error-message'
-import { RAW_INPUT_BROWSERS, rawInputLikelySupported } from '../../input/pointer'
+import { isChromium, RAW_INPUT_BROWSERS, RAW_INPUT_CAVEAT, rawInputLikelySupported } from '../../input/pointer'
 import { runStore } from '../../storage/runs'
 import { newSeed } from '../defaults'
 import { centreOf, MIN_REST_SECONDS, newFinderSession, runRoute } from '../finder'
@@ -71,6 +71,11 @@ export function Finder({ go }: ScreenProps<'finder'>) {
         <p className="warning" role="status">
           This browser may not give raw mouse input. The Finder checks when your first Run starts and stops if it does not. Raw input works in:{' '}
           {RAW_INPUT_BROWSERS}
+        </p>
+      )}
+      {!isChromium(navigator.userAgent) && (
+        <p className="warning" role="status">
+          {RAW_INPUT_CAVEAT}
         </p>
       )}
 

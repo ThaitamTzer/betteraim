@@ -9,6 +9,16 @@
 export const RAW_INPUT_BROWSERS =
   'Chrome, Edge and Opera 88 or newer on Windows, macOS or ChromeOS; Firefox 152 or newer on Windows or macOS; Safari 18.4 or newer. Linux is not supported yet.'
 
+/**
+ * What the Finder says to players of other browsers than Chromium. Firefox and Safari report `movementX/Y` in other units (CSS pixels, scaled by
+ * zoom and display scale, in the research note), so their raw counts are less verified: a cm/360 shown there may be scaled. Copy only, no gating.
+ */
+export const RAW_INPUT_CAVEAT =
+  'Chrome, Edge and Opera are the verified path. In Firefox and Safari the mouse counts are less well verified (the browser may scale them), so the cm/360 and Game Sensitivity shown there may be scaled.'
+
+/** Chrome, Edge and Opera say `Chrome/` (Edge `Edg/`, Opera `OPR/`) in their user agent; Firefox and Safari do not. Only picks which copy to show. */
+export const isChromium = (userAgent: string): boolean => /\b(?:Chrome|Chromium|Edg|OPR)\//.test(userAgent)
+
 /** Chromium and Firefox 148+ expose `pointerrawupdate`; Safari does not but may still give raw movement. Only an early hint. */
 export const rawInputLikelySupported = (): boolean => 'onpointerrawupdate' in window
 

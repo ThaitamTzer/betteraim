@@ -1,6 +1,6 @@
 import { cm360For, getGameProfile, getScenario, planSession, profileFov } from '../core'
 import type { Cm360, Fov, GameProfileId, NextSession, PlannedRun, RunRecord } from '../core'
-import { RAW_INPUT_BROWSERS } from '../input/pointer'
+import { RAW_INPUT_BROWSERS, RAW_INPUT_CAVEAT } from '../input/pointer'
 import type { Route } from './routes'
 import type { Settings } from './settings'
 
@@ -122,6 +122,7 @@ export function stepView(session: FinderSession, step: FinderStep): StepView {
         lines: [
           'This browser captured the mouse with OS pointer acceleration, which would distort every Sensitivity. The unfinished Run was not recorded as a Finder Run.',
           `Raw input works in: ${RAW_INPUT_BROWSERS}`,
+          RAW_INPUT_CAVEAT,
           'Practice still works here, from Home.',
         ],
       }
