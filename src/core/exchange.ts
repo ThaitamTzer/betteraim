@@ -1,11 +1,13 @@
 import { fromBase64, toBase64 } from './codec'
 import { packRun, unpackRun } from './storage'
-import type { RunStore, RunSummary } from './storage'
+import type { FinderResets, RunStore, RunSummary } from './storage'
 import type { RunMode, RunRecord, ScenarioId } from './types'
 
 // The export is ONE JSON file: { format, version, runs: [{ ...summary, input, targetEvents }] } where `input` and
 // `targetEvents` are the binary codec output as base64 text. A change that old readers cannot understand bumps
 // EXPORT_VERSION; importers reject any version they do not know. Later data (options, Finder state) adds keys beside `runs`.
+// `finderResets` ({ [Game Profile id]: time }, Reset Finder #11) is such a key: optional, absent from files of players who never reset and
+// from files written before it existed, which therefore import with no resets. A change that only adds an optional key does not bump the version.
 export const EXPORT_FORMAT = 'betteraim-export'
 export const EXPORT_VERSION = 1
 
@@ -20,21 +22,23 @@ export async function exportData(store: RunStore): Promise<string> {
     const { summary, body } = packRun(record)
     runs.push({ ...summary, input: toBase64(body.input), targetEvents: toBase64(body.targetEvents) })
   }
-  return JSON.stringify({ format: EXPORT_FORMAT, version: EXPORT_VERSION, runs })
+  const finderResets = await store.finderResets()
+  return JSON.stringify({ format: EXPORT_FORMAT, version: EXPORT_VERSION, runs, ...(Object.keys(finderResets).length > 0 && { finderResets }) })
 }
 
 /**
  * Adds the Runs in an export file to the store (a Run with a known id is replaced, nothing is deleted, so importing
- * the same file twice changes nothing). The whole file is validated first and written in one `save`: a bad file
- * never touches existing data. Returns the number of Runs in the file.
+ * the same file twice changes nothing; a Reset Finder marker keeps the later of the two times). The whole file is validated first and the
+ * Runs are written in one `save`: a bad file never touches existing data. Returns the number of Runs in the file.
  */
 export async function importData(store: RunStore, text: string): Promise<number> {
-  const records = parseExport(text)
-  await store.save(records)
-  return records.length
+  const { runs, finderResets } = parseExport(text)
+  await store.save(runs)
+  for (const [gameProfileId, at] of Object.entries(finderResets)) await store.resetFinder(gameProfileId, at)
+  return runs.length
 }
 
-export function parseExport(text: string): RunRecord[] {
+export function parseExport(text: string): { runs: RunRecord[]; finderResets: FinderResets } {
   let file: unknown
   try {
     file = JSON.parse(text)
@@ -46,13 +50,20 @@ export function parseExport(text: string): RunRecord[] {
     fail(`This file is export version ${String(file.version)}; this app reads version ${EXPORT_VERSION}.`)
   }
   if (!Array.isArray(file.runs)) fail('The file has no list of Runs.')
-  return file.runs.map((run: unknown, i) => {
+  const runs = file.runs.map((run: unknown, i) => {
     try {
       return parseRun(run)
     } catch (error) {
       throw new ImportError(`Run ${i + 1}: ${error instanceof Error ? error.message : 'invalid'}`)
     }
   })
+  return { runs, finderResets: parseResets(file.finderResets) }
+}
+
+function parseResets(raw: unknown): FinderResets {
+  if (raw === undefined) return {} // files from before Reset Finder, or from a player who never reset
+  if (!isObj(raw)) fail('"finderResets" must be an object.')
+  return Object.fromEntries(Object.entries(raw).map(([id, at]) => [id, isNum(at) ? at : fail(`Reset marker "${id}" must be a number.`)]))
 }
 
 type Obj = Record<string, unknown>

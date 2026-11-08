@@ -1,5 +1,6 @@
-import { ENOUGH_HALF_WIDTH, eDpi, gameSensitivityFor, getGameProfile, recommend } from '../core'
-import type { FinderFit, GameProfileId, Recommendation } from '../core'
+import { ENOUGH_HALF_WIDTH, eDpi, FINE_HALF_WIDTH, FINE_SPREAD, gameSensitivityFor, getGameProfile, recommend } from '../core'
+import type { FinderFit, GameProfileId, NextSession, Recommendation, ScenarioCategory } from '../core'
+import { fmt } from './format'
 
 export interface ResultView {
   /** The Recommended Sensitivity in the three forms a player types somewhere. Game Sensitivity and eDPI are always by formula from cm/360. */
@@ -31,14 +32,19 @@ export function resultView(fit: FinderFit, gameProfileId: GameProfileId, dpi: nu
   const limit = `${Math.round(ENOUGH_HALF_WIDTH * 100)}%`
   const message = ((): string => {
     if (fit.reason === 'no-interior-peak') {
-      const side = fit.curve.score.at(-1)! >= fit.curve.score[0]! ? 'higher' : 'lower'
-      return `There is no Curve Peak yet: the curve is still climbing towards the ${side} cm/360 end of what you tested, so your best Sensitivity may lie outside that range. Another Session will tell more.`
+      // The edge of the range is never offered as a Recommended Sensitivity, so no number is named here.
+      const side = fit.curve.score.at(-1)! >= fit.curve.score[0]! ? 'higher (slower)' : 'lower (faster)'
+      return `Your best Sensitivity seems to lie outside the range you tested, towards a ${side} cm/360. There is no Curve Peak yet, so no Sensitivity is recommended. The next Session shifts the range that way.`
     }
     if (fit.reason === 'insufficient-data') {
-      const left = counts.excluded.warmup + counts.excluded.practice + counts.excluded.filtered + counts.excluded.incompletePair
-      return counts.runs === 0 && left === 0
-        ? 'You have not played the Sensitivity Finder for this game yet. Play a Session and the curve starts to take shape.'
-        : 'There is not enough finished data to draw a curve yet. A Scenario counts once you have played it at every level of a Session, so finish your Sessions.'
+      const { warmup, practice, filtered, incompletePair } = counts.excluded
+      if (counts.runs === 0 && warmup + practice + filtered + incompletePair === 0) {
+        return 'You have not played the Sensitivity Finder for this game yet. Play a Session and the curve starts to take shape.'
+      }
+      if (counts.runs === 0 && filtered > 0 && incompletePair === 0) {
+        return 'You reset the Finder for this game, so your earlier Runs no longer count. They are kept for Analysis, History and Past Runs. Play a Session to start a new curve.'
+      }
+      return 'There is not enough finished data to draw a curve yet. A Scenario counts once you have played it at every level of a Session, so finish your Sessions.'
     }
     if (!interval) return `${sessions(counts.sessions)} so far. Play at least one more Session to get a confidence interval.`
     return fit.enoughData
@@ -64,4 +70,84 @@ export function chartRows(fit: FinderFit): { x: number[]; curve: (number | null)
   }
   rows.sort((a, b) => a.x - b.x)
   return { x: rows.map((r) => r.x), curve: rows.map((r) => r.curve), points: rows.map((r) => r.point) }
+}
+
+// --- Finder phases and per-category curves (#11) ---
+
+const percentOf = (share: number): string => `±${Math.round(share * 100)}%`
+
+/** What a Session will do, in words ("Next Session: " or "This Session: " goes in front). Says nothing about which Sensitivities: those stay hidden until the Session is over. */
+export function nextView(next: NextSession): string {
+  switch (next.reason) {
+    case 'start':
+      return 'coarse phase, 7 Sensitivities from half to double your current one.'
+    case 'coarse':
+      return `coarse phase again, 7 Sensitivities from half to double around your Curve Peak, until the interval is narrower than ${percentOf(FINE_HALF_WIDTH)}.`
+    case 'fine':
+      return `fine phase, 5 Sensitivities within ${percentOf(FINE_SPREAD)} around your Curve Peak.`
+    case 'shift-higher':
+      return 'still coarse, shifting the range towards the slower edge (higher cm/360).'
+    case 'shift-lower':
+      return 'still coarse, shifting the range towards the faster edge (lower cm/360).'
+  }
+}
+
+export interface CategoriesView {
+  categories: { label: 'Clicking' | 'Tracking'; message: string }[]
+  /** Whether the two peaks differ noticeably, said plainly; null when it cannot be told (a category has no peak or no interval). */
+  difference: string | null
+}
+
+const CATEGORY_LABEL: Record<ScenarioCategory, 'Clicking' | 'Tracking'> = { clicking: 'Clicking', tracking: 'Tracking' }
+
+/**
+ * One line per category (its peak and interval, or why it has none) and whether the two peaks differ noticeably. "Noticeably" is that the
+ * two intervals do not overlap: each category is fitted on its own, so peaks that are closer than that are within what a few Sessions of noise do.
+ */
+export function categoriesView(fits: Record<ScenarioCategory, FinderFit>): CategoriesView {
+  const categories = (['clicking', 'tracking'] as const).map((category) => {
+    const fit = fits[category]
+    const label = CATEGORY_LABEL[category]
+    const message = ((): string => {
+      if (fit.peak !== null) {
+        return fit.interval
+          ? `${label}: peak ${fmt(fit.peak)} cm/360, interval ${fmt(fit.interval.low)} to ${fmt(fit.interval.high)} cm/360.`
+          : `${label}: peak ${fmt(fit.peak)} cm/360, no interval yet (it needs more Sessions with a ${label} Scenario).`
+      }
+      if (fit.reason === 'no-interior-peak') {
+        const side = fit.curve.score.at(-1)! >= fit.curve.score[0]! ? 'higher' : 'lower'
+        return `${label}: no peak inside the tested range yet, the curve is still climbing towards ${side} cm/360.`
+      }
+      return `${label}: not enough finished data for a curve yet. A Scenario counts once you have played it at every level of a Session.`
+    })()
+    return { label, message }
+  })
+  const { clicking, tracking } = fits
+  if (clicking.peak === null || tracking.peak === null || !clicking.interval || !tracking.interval) return { categories, difference: null }
+  const apart = clicking.interval.high < tracking.interval.low || tracking.interval.high < clicking.interval.low
+  return {
+    categories,
+    difference: apart
+      ? `The two peaks differ noticeably: Clicking at ${fmt(clicking.peak)} cm/360 and Tracking at ${fmt(tracking.peak)} cm/360, and their intervals do not overlap. The combined curve weighs them by how your game is played.`
+      : 'The two peaks agree within their intervals: Clicking and Tracking do not favour clearly different Sensitivities (yet).',
+  }
+}
+
+/** Both category curves on one shared ascending x for the chart (each is null where it has no point), with a marker at each peak. */
+export function categoryRows(fits: Record<ScenarioCategory, FinderFit>): {
+  x: number[]
+  clicking: (number | null)[]
+  tracking: (number | null)[]
+  markers: { x: number; label: string }[]
+} {
+  const x = [...new Set([...fits.clicking.curve.sensitivity, ...fits.tracking.curve.sensitivity])].sort((a, b) => a - b)
+  const column = ({ curve }: FinderFit): (number | null)[] => {
+    const at = new Map(curve.sensitivity.map((s, i) => [s, curve.score[i]!]))
+    return x.map((s) => at.get(s) ?? null)
+  }
+  const markers = (['clicking', 'tracking'] as const).flatMap((c) => {
+    const peak = fits[c].peak
+    return peak === null ? [] : [{ x: peak, label: `${CATEGORY_LABEL[c]} peak` }]
+  })
+  return { x, clicking: column(fits.clicking), tracking: column(fits.tracking), markers }
 }

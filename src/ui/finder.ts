@@ -1,5 +1,5 @@
-import { cm360For, coarseLevels, getGameProfile, getScenario, planSession, profileFov } from '../core'
-import type { Fov, GameProfileId, PlannedRun, RunRecord } from '../core'
+import { cm360For, getGameProfile, getScenario, planSession, profileFov } from '../core'
+import type { Cm360, Fov, GameProfileId, NextSession, PlannedRun, RunRecord } from '../core'
 import type { Route } from './routes'
 import type { Settings } from './settings'
 
@@ -31,13 +31,23 @@ export interface FinderSession {
   done: number
 }
 
-/** A coarse-phase Session centred on the player's Sensitivity, which onboarding fills with the Game Profile default until they change it. */
-export function newFinderSession(settings: Settings, seed: number, id: string): FinderSession {
-  const { gameProfileId, gameSensitivity, dpi } = settings
-  const centre = cm360For(gameProfileId, gameSensitivity, dpi)
-  const levels = coarseLevels(centre)
+/** The player's current Sensitivity in cm/360 (onboarding fills the Game Profile default until they change it): the Centre until the Finder has data. */
+export const centreOf = ({ gameProfileId, gameSensitivity, dpi }: Pick<Settings, 'gameProfileId' | 'gameSensitivity' | 'dpi'>): Cm360 =>
+  cm360For(gameProfileId, gameSensitivity, dpi)
+
+/** The Session the planner chose (`nextSession`: coarse, fine or shifted), turned into a Run list. `next.levels` is what every Run plays, so `levels` is 7 or 5. */
+export function newFinderSession(settings: Settings, seed: number, id: string, next: NextSession): FinderSession {
+  const { gameProfileId, dpi } = settings
   const weights = getGameProfile(gameProfileId).weights
-  return { id, gameProfileId, dpi, fov: profileFov(gameProfileId), plan: planSession({ centre, levels, weights, seed }), levels: levels.length, done: 0 }
+  return {
+    id,
+    gameProfileId,
+    dpi,
+    fov: profileFov(gameProfileId),
+    plan: planSession({ centre: next.centre, levels: next.levels, weights, seed }),
+    levels: next.levels.length,
+    done: 0,
+  }
 }
 
 /** Screens that sit between Runs (or end the Session). */

@@ -1,20 +1,53 @@
 import { useEffect, useState } from 'react'
-import { getGameProfile } from '../../core'
+import { finderRunsFor, fitFinder, getGameProfile, nextSession } from '../../core'
 import { rawInputLikelySupported } from '../../input/pointer'
+import { runStore } from '../../storage/runs'
 import { newSeed } from '../defaults'
-import { MIN_REST_SECONDS, newFinderSession, RAW_INPUT_BROWSERS, runRoute } from '../finder'
+import { centreOf, MIN_REST_SECONDS, newFinderSession, RAW_INPUT_BROWSERS, runRoute } from '../finder'
+import type { FinderSession } from '../finder'
+import { nextView } from '../finder-result'
 import type { ScreenProps } from '../routes'
 import { loadSettings } from '../settings'
+
+type Planned = { session: FinderSession; phase: string } | { error: string } | null
 
 /** Entry of the Sensitivity Finder: what a Session is, then Start. Raw input is verified for real when the first Run locks the pointer. */
 export function Finder({ go }: ScreenProps<'finder'>) {
   const [settings] = useState(loadSettings)
-  // One Session per visit to this screen, planned now so the copy can state its size.
-  const [session] = useState(() => settings && newFinderSession(settings, newSeed(), crypto.randomUUID()))
+  // One Session per visit to this screen, planned now (from the Runs so far: coarse, fine or shifted) so the copy can state its size.
+  const [planned, setPlanned] = useState<Planned>(null)
   useEffect(() => {
     if (!settings) go({ name: 'onboarding' })
   }, [settings, go])
-  if (!settings || !session) return <></>
+  // Not keyed on `go` (a new function on every App render): that would plan another Session, with a new seed, each time.
+  useEffect(() => {
+    if (!settings) return
+    let current = true
+    void (async () => {
+      const { runs, exclude } = await finderRunsFor(await runStore(), settings.gameProfileId)
+      const next = nextSession(fitFinder(runs, { weights: getGameProfile(settings.gameProfileId).weights, exclude }), centreOf(settings))
+      return { session: newFinderSession(settings, newSeed(), crypto.randomUUID(), next), phase: nextView(next) }
+    })().then(
+      (result) => current && setPlanned(result),
+      (error: unknown) => current && setPlanned({ error: error instanceof Error ? error.message : String(error) }),
+    )
+    return () => {
+      current = false
+    }
+  }, [settings])
+  if (!settings) return <></>
+  if (!planned) return <main className="page"><p className="lede">Planning your Session...</p></main>
+  if ('error' in planned) {
+    return (
+      <main className="page">
+        <p className="warning" role="alert">Your Runs could not be read, so the Session could not be planned: {planned.error}</p>
+        <div className="actions">
+          <button type="button" onClick={() => go({ name: 'home' })}>Back</button>
+        </div>
+      </main>
+    )
+  }
+  const { session, phase } = planned
 
   const total = session.plan.length
   const minutes = Math.round((total * 30 + (total - 1) * MIN_REST_SECONDS) / 60)
@@ -28,6 +61,7 @@ export function Finder({ go }: ScreenProps<'finder'>) {
         field of view. The first 2 are Warm-up Runs and do not count. The rest play 2 Scenarios, each at {session.levels} different Sensitivities, in a
         shuffled order.
       </p>
+      <p className="lede">This Session: {phase}</p>
       <p className="lede">
         You are never told which Sensitivity a Run uses, so what you expect cannot change how you play. Every finished Run is saved.
       </p>
