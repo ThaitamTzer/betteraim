@@ -4,6 +4,8 @@ export { aggregateRuns, byDay, bySession, groupRuns, loadAnalysed } from './aggr
 export type { AnalysedRun, Aggregate, ClickingMetrics, Metrics, RunGroup, ScenarioAggregate, TrackingMetrics } from './aggregate'
 export { analyseRun } from './analysis'
 export type { AimMovement, ClickingAnalysis, Outcome, RunAnalysis, RunData, TrackingAnalysis } from './analysis'
+export { askJson, buildAdvicePayload, CoachError, practiceAdvice, schemaError } from './coach'
+export type { AdvicePayload, CoachErrorKind, CoachProvider, CoachRequest, JsonSchema } from './coach'
 export { decodeInput, decodeTargetEvents, encodeInput, encodeTargetEvents, fromBase64, toBase64 } from './codec'
 export { EXPORT_FORMAT, EXPORT_VERSION, exportData, ImportError, importData, parseExport } from './exchange'
 export { cm360For, convertSensitivity, eDpi, gameProfiles, gameSensitivityFor, getGameProfile, isGameProfileId, practiceFov, profileFov, readSensitivity } from './game-profiles'
