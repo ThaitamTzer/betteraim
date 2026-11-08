@@ -7,7 +7,7 @@ import { formatScore } from '../score'
 import '../finder.css'
 
 /**
- * Every screen between the Runs of a Finder Session (rest, abandoned Run, no raw input, complete). It prints only
+ * Every screen between the Runs of a Finder Session (rest, abandoned Run, no raw input). It prints only
  * `stepView` and the last Score, never a Sensitivity, and the topbar is hidden while it shows (App.tsx).
  */
 export function FinderBreak({ route, go }: ScreenProps<'finderSession'>) {
@@ -81,7 +81,7 @@ export function FinderBreak({ route, go }: ScreenProps<'finderSession'>) {
             </button>
           </>
         )}
-        {(step === 'notRaw' || step === 'complete') && (
+        {step === 'notRaw' && (
           <button type="button" className="primary" ref={primary} onClick={home}>
             Back to Home
           </button>

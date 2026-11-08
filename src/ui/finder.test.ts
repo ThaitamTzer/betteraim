@@ -14,7 +14,7 @@ const session = (done = 0) => ({ ...newFinderSession(settings, 7, 'session-a', S
 /** After 8 coarse Sessions of a player whose optimum is 33 cm/360 the interval is under +-25%: the next Session is the fine phase. */
 const FINE = nextSession(fitFinder(syntheticRuns(syntheticPlayer({ optimum: 33 }), Array.from({ length: 8 }, () => ({ levels: coarseLevels(40) })), 1), { weights }), centreOf(settings))
 const fineSession = (done = 0) => ({ ...newFinderSession(settings, 7, 'session-f', FINE), done })
-const STEPS: FinderStep[] = ['rest', 'abandoned', 'notRaw', 'complete']
+const STEPS: FinderStep[] = ['rest', 'abandoned', 'notRaw']
 
 /** Every way a Sensitivity could be printed: full precision, the app's 4 significant digits, 1 and 2 decimals. */
 const spellings = (cm360: number) => [String(cm360), fmt(cm360), cm360.toFixed(1), cm360.toFixed(2)]
@@ -76,12 +76,6 @@ describe('progress', () => {
 
   it('has a rest long enough to matter', () => {
     expect(MIN_REST_SECONDS).toBeGreaterThanOrEqual(5)
-  })
-
-  it('completes with the number of Runs played', () => {
-    const view = stepView(session(16), 'complete')
-    expect(view.heading).toBe('Session complete')
-    expect(view.lines.join(' ')).toContain('16 of 16')
   })
 
   it('tells an abandoned Run from a quit: finished Runs stay saved', () => {

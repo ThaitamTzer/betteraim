@@ -24,7 +24,7 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 - `aggregate.ts` pure aggregators over `AnalysedRun = { run: RunSummary, analysis: RunAnalysis }`: `aggregateRuns(items)` pools per Scenario
   (rates recomputed from pooled counts, Warm-up Runs only counted in `warmups`), `groupRuns(items, keyOf)` for any grouping, with `bySession`
   and `byDay(items, dayOf)` on top (the shell supplies `dayOf`: the core has no time zone). `loadAnalysed(store, filter, cache?)` lists, loads and
-  analyses Runs (15 to 70 ms per Run, Tracking Runs the most: pass a `Map` cache when you load more than once). `loadAnalysedRuns(store, summaries, cache?, onProgress?)` is the same for Runs already picked (the AI Coach analyses only `fit.counts.used`); `onProgress(done, total)` is awaited, so a screen can slice the work. `poolTracking` pools `TrackingMetrics` (= `TrackingAnalysis`) by sample count and Run length. Ticket #14/#15 reuse it on their own groupings.
+  analyses Runs (15 to 70 ms per Run, Tracking Runs the most: pass a `Map` cache when you load more than once). `loadAnalysedRuns(store, summaries, cache?, onProgress?)` is the same for Runs already picked (the AI Coach analyses only `fit.counts.used`); `onProgress(done, total)` is awaited, so a screen can slice the work. `poolTracking` pools `TrackingMetrics` (= `TrackingAnalysis`) by sample count and Run length.
 - `finder/` the Session plan (`plan.ts`, #9), the fit (`model.ts`, #10), the next Session, Reset and per-category fits (`next.ts`, `reset.ts`, `categories.ts`, #11); see the Finder sections below. The AI Coach's Recommended Sensitivity (#15) is in `coach/sensitivity.ts`.
 - `coach/` the AI Coach (ADR-0003), network-free. `provider.ts` is the port: `CoachProvider.complete({ system, prompt, json? })` returns the model's text
   (`json: { name, schema }` asks for a JSON reply: free text and structured are one call, so an operation never changes an adapter), and
@@ -33,7 +33,7 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   numbers, so no Aim Movement list or input can get in) and one prompt, with the reply language in the system prompt. `json.ts` `askJson(provider,
   { system, prompt, name, schema })` is the structured operation: it states the schema in the prompt too, parses (a code fence is tolerated) and
   checks the reply against the schema (`schemaError`), throwing `malformed` otherwise. The Recommended Sensitivity (#15) is built on `askJson`
-  (see the AI Coach section below). Adapters and the key store are shell code in `src/coach/`: no retry loops, one request per press.
+  (see the AI Coach section below). Adapters and the key store are shell code in `src/coach/`. One press of the button is one request, except that the OpenAI-compatible adapter re-sends it once per optional parameter (`temperature`, `response_format`) that an endpoint rejects, without that parameter. The guardrail retry (an answer outside the interval is asked again once, `coach/sensitivity.ts`) is separate and sits above the adapters.
 
 ## Conventions
 - Units: degrees, ms since Run start, Sensitivity = cm/360. Yaw > 0 is right, pitch > 0 is up (crosshair pitch is clamped to
@@ -98,9 +98,9 @@ replaySteps(record, record.input, ({ crosshair, held, targets }) => {
 - Order: 2 Warm-up Runs (one per drawn Scenario, at `centre`, seeds of their own so the counted target sequence is not rehearsed), then
   each drawn Scenario once at every level, shuffled. All levels of a Scenario share one seed; the two Scenarios differ.
 - Scenario draw: category by weight, then a Scenario of it uniformly, twice, skipping the first pick. With 2 Scenarios per category the long-run
-  category share equals the weights exactly (the model in #10 re-weights by actual vs target share anyway).
+  category share equals the weights exactly (the fit re-weights by actual vs target share anyway).
 - Saved Runs carry `mode: 'finder'`, `warmup`, `sessionId` and `levels` (levels per Scenario). A (Session, Scenario) pair is complete when it has
-  `levels` non-warm-up Runs; an abandoned or quit Session leaves incomplete pairs for #10 to exclude. Run order within a Session is `startedAt`.
+  `levels` non-warm-up Runs; an abandoned or quit Session leaves incomplete pairs, which the fit excludes. Run order within a Session is `startedAt`.
 - The shell side (session loop, screens that never print a Sensitivity) is in `src/ui/finder.ts`.
 
 ## Sensitivity Finder fit (`finder/model.ts`, ticket #10)
@@ -117,21 +117,21 @@ counted Runs than `RunMeta.levels` (pairs are judged after `exclude`, so a Reset
 
 `FinderFit` fields:
 - `peak: Cm360 | null`, `reason: null | 'insufficient-data' | 'no-interior-peak'`. `no-interior-peak` = the curve is a valley or its top lies outside `range`; then `curve`
-  and `range` are still filled, and **the higher end of `curve.score` is the side to shift the Centre towards** (#11 owns the message and the shift).
+  and `range` are still filled, and **the higher end of `curve.score` is the side to shift the Centre towards** (`finder/next.ts` shifts the Centre that way, `resultView` words it).
   `insufficient-data` = nothing to fit, or too few Runs/levels to identify the curve (then `curve` is empty).
-- `interval: { low, high, halfWidth } | null`: percentile bootstrap over Sessions, 2000 resamples (`BOOTSTRAP_RESAMPLES`), central 90% (`INTERVAL_LEVEL`), clamped to `range`,
-  always containing `peak`. `halfWidth = (high - low) / 2 / peak`, so `halfWidth < 0.25` is the fine-phase switch and `halfWidth < 0.1` (`ENOUGH_HALF_WIDTH`) is `enoughData`.
+- `interval: { low, high, halfWidth } | null`: percentile bootstrap over Sessions, 2000 resamples (`BOOTSTRAP_RESAMPLES`), central 90% (`INTERVAL_LEVEL`), **not clamped** to `range`,
+  always containing `peak`. `halfWidth = (high - low) / 2 / peak`, so `halfWidth < 0.25` is the fine-phase switch. `enoughData` needs `halfWidth < 0.1` (`ENOUGH_HALF_WIDTH`) AND an interval strictly inside `range`: one that touches or leaves the tested range is not enough data, whatever its width.
   Null without a peak or with fewer than 2 Sessions (nothing to resample). The bootstrap is seeded from the fitted Runs (FNV-1a of their ids, Sensitivities and
   Scores), so the same data gives the same interval and #15 may cache on the Runs. A fit takes about 10 ms for 10 Sessions.
 - **The interval is stretched.** Resampling few Sessions under-states the spread, so the percentile interval is widened about the peak by `sqrt(S/(S-1)) x t/z` (Student t on
   S-1 df over the normal, 95th percentiles). Plain percentiles covered the true optimum 73% of the time at 5 Sessions (nominal 90%); stretched, 88 to 89% from 5 to 12
-  Sessions on the default synthetic player, whose intervals are about +-37% at 2 Sessions, +-13% at 5 and +-9.5% at 8: "enough data" arrives after roughly 8 to 12 coarse Sessions.
+  Sessions on the default synthetic player (ADR-0004), whose intervals are about +-37% at 2 Sessions, +-13% at 5 and +-9.5% at 8: "enough data" arrives after roughly 8 to 12 coarse Sessions.
 - `range`: tested Sensitivities `{ min, max }`. `curve: { sensitivity[], score[] }`: 61 log-spaced points over `range`; `score` is in Scenario spreads **relative to the top of the curve** (max 0).
   `points`: per distinct tested Sensitivity, the mean scaled Score with pair offsets and run order taken out, on the same axis as `curve` (the partial residuals).
 - `coefficients`: slopes in x = (ln c - centre) / halfRange, so `range` is x in [-1, 1]; `offsets`: per pair, the scaled Score at the top of the curve at Session start;
   `spread`: the divisor of each Scenario; `counts`: Sessions, pairs, Runs used and Runs excluded by cause.
 - `counts.used` is the Runs the fit used (Warm-up Runs, Practice Runs, `exclude`d Runs and incomplete pairs already out, so Reset applies by itself), in id order: the AI Coach payload and its snapshot key read these, not a selection of their own.
-- `recommend(fit, coach?)` is the seam of #15: the AI Coach's choice (`Recommendation`, `source: 'coach'`) when it lies inside `fit.interval`, else the Curve Peak.
+- `recommend(fit, coach?)` is where the AI Coach plugs in: the AI Coach's choice (`Recommendation`, `source: 'coach'`) when it lies inside `fit.interval`, else the Curve Peak.
 
 Synthetic players (`testing/synthetic.ts`, tests only, also for #11): `syntheticPlayer({ optimum, curvature, noise, trend, form, warmupPenalty, scenarios })` and
 `syntheticRuns(player, sessions, seed)` make `RunSummary`s without the engine. Score = level + scale x (-curvature x ln(c / optimum)^2 + trend x order + form + noise); `form` is one draw
@@ -149,7 +149,7 @@ only when the player presses the button (never on load). `items` are `AnalysedRu
   Per level and Scenario: Runs, `scaledScore` (mean Score over `fit.spread`, the fit's own scaling, not adjusted for Session form: the curve is) and Overshoot/Undershoot rates, Path Deviation, Smoothness, accuracy (Clicking) or Ahead/Behind, Time on Target (Tracking).
 - **Player Context** (`coach/context.ts`): role, mousepad, aiming, each one of a few fixed choices or absent. `parsePlayerContext` drops anything else, in the core, so a hand-edited save cannot put text in the prompt. The reply language goes through `cleanLanguage` (one short line).
 - **Request**: `askJson` with `{ recommendedCm360, reasons }`. No `maxItems`/`maxLength` in the schema (structured-output endpoints reject them): reasons are trimmed and bounded after parsing (5, 400 characters), a non-positive number or no reasons is `malformed`.
-- **Guardrail**: an answer outside `[interval.low, interval.high]` is asked again once with a reminder naming the interval; a second miss falls back to the Curve Peak with a `notice`. Refusal, any error and malformed output fall back at once, never retried.
+- **Guardrail**: an answer outside `[interval.low, interval.high]` cut to `range` (the AI Coach never picks an untested Sensitivity) is asked again once with a reminder naming the interval; a second miss falls back to the Curve Peak with a `notice`. Refusal, any error and malformed output fall back at once, never retried.
 - **Cache** (`ChoiceCache` port, `createChoiceCache`; the app keeps it in localStorage, `src/coach/choice-cache.ts`, last 5): key = `snapshotKey` = prompt version, Game Profile, the fitted Runs (count and hash of id, Sensitivity, Score: any new Run changes it,
   a Reset too, a Warm-up Run or an unfinished pair does not), Player Context, language and `model` (the shell's provider + model + endpoint, never the API key). Only an accepted AI Coach answer is cached: a fallback of any kind, a guardrail miss included, is not, so the next press asks again.
   `cachedRecommendation(...)` reads it without a provider call and without any Analysis: the result screen uses it when it opens, so the same data keeps the same number after a reload.
