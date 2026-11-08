@@ -6,7 +6,7 @@ export { cm360For, convertSensitivity, eDpi, gameProfiles, gameSensitivityFor, g
 export type { GameFov, GameProfile, GameProfileId, SensitivityReading } from './game-profiles'
 export { createRng } from './rng'
 export type { Rng } from './rng'
-export { createRun, replay, RUN_DURATION_MS, STEP_MS } from './run'
+export { createRun, replay, replaySteps, RUN_DURATION_MS, STEP_MS } from './run'
 export type { Run } from './run'
 export type { Rules, ScenarioDefinition } from './scenario'
 export { getScenario, scenarios } from './scenarios'

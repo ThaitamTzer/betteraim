@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { angleBetween, offsetAim } from '../aim'
-import { createRun } from '../run'
+import { createRun, replaySteps } from '../run'
 import { runBot, trackBot } from '../testing/bots'
 import type { Bot } from '../testing/bots'
 import { testParams } from '../testing/params'
-import type { RunParams, RunRecord, Target } from '../types'
+import type { RunParams, RunState, Target } from '../types'
 import { getScenario } from './index'
 
 const strafe = (overrides: Partial<RunParams> = {}) => testParams({ scenario: 'strafe', ...overrides })
@@ -145,15 +145,24 @@ describe('Strafe path from the Run record (what Analysis needs)', () => {
   it('is recovered by replaying the recorded input one ms at a time, with the crosshair beside it', () => {
     const params = strafe({ seed: 5 })
     const { result, seen } = playAndWatch(params, trackBot({ leadMs: -120 }))
-    const record: RunRecord = { ...params, id: 'r', startedAt: 0, gameProfileId: 'test', mode: 'practice', warmup: false, ...result }
+    const states: RunState[] = []
+    const replayed = replaySteps(params, result.input, (state) => states.push(state))
+    expect(states).toHaveLength(30_000) // steps 1 to 30 000
+    expect(states.slice(0, -1).map((s) => s.targets[0])).toEqual(seen.slice(1)) // the ticks the bot saw, 1 to 29 999
+    expect(states.at(-1)?.crosshair).not.toEqual({ yaw: 0, pitch: 0 })
+    expect(replayed).toEqual(result)
+  })
 
-    const run = createRun(record)
-    let next = 0
-    for (let t = 0; t < 30_000; t++) {
-      run.push({ kind: 'tick', t })
-      expect(run.state().targets[0]).toEqual(seen[t])
-      for (let e = record.input[next]; e && e.t <= t; e = record.input[++next]) run.push(e)
-    }
-    expect(run.state().crosshair).not.toEqual({ yaw: 0, pitch: 0 })
+  it('gives time on target again from the replay: the Score is the share of steps with fire held and the crosshair on it', () => {
+    const params = strafe({ seed: 5 })
+    const { result } = playAndWatch(params, trackBot({ leadMs: -120 }))
+    let onTarget = 0
+    replaySteps(params, result.input, ({ held, crosshair, targets }) => {
+      const target = targets[0]
+      if (held && target && angleBetween(crosshair, target) <= target.radius) onTarget++
+    })
+    expect(result.score).toBeGreaterThan(20)
+    expect(result.score).toBeLessThan(80)
+    expect((100 * onTarget) / 30_000).toBeCloseTo(result.score, 9)
   })
 })

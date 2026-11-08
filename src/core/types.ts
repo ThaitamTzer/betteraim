@@ -110,6 +110,8 @@ export interface RunState {
   t: number
   done: boolean
   crosshair: Aim
+  /** Whether the fire button is held. */
+  held: boolean
   /** Targets alive now (Switch has several). */
   targets: readonly Target[]
   /** Score so far; final once `done`. */

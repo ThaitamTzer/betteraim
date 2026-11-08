@@ -136,6 +136,9 @@ _Avoid_: underflick
 **Ahead / Behind**:
 In tracking, the crosshair leading or trailing a moving target along its direction of travel. Never called Overshoot or Undershoot.
 
+**Time on Target**:
+In a Tracking Scenario, the time the fire button is held with the crosshair on a target. Strafe's Score is its share of the Run; a Switch target falls after 0.4 s of it. Not the Aim Movement outcome "on-target".
+
 **Smoothness**:
 How few corrections an Aim Movement needs; measured by its number of velocity peaks, fewer meaning smoother.
 _Avoid_: stability, control

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { aimDelta, angleBetween } from '../aim'
-import { createRun, RUN_DURATION_MS } from '../run'
+import { exportData, importData } from '../exchange'
+import { replay, replaySteps } from '../run'
+import { createMemoryStore } from '../storage'
 import { runBot, trackBot } from '../testing/bots'
 import type { Bot } from '../testing/bots'
-import { testParams } from '../testing/params'
+import { testMeta, testParams } from '../testing/params'
 import type { RunParams, RunRecord, RunState, TargetEvent } from '../types'
 import { getScenario } from './index'
 
@@ -169,13 +171,32 @@ describe('Switch determinism and units', () => {
   it('has its targets and heading recovered by replaying the recorded input one ms at a time', () => {
     const params = sw({ seed: 5 })
     const { result: played, states } = live(params, trackBot({ leadMs: -100 }))
-    const record: RunRecord = { ...params, id: 'r', startedAt: 0, gameProfileId: 'test', mode: 'practice', warmup: false, ...played }
-    const run = createRun(record)
-    let next = 0
-    for (let t = 0; t < RUN_DURATION_MS; t++) {
-      run.push({ kind: 'tick', t })
-      expect(run.state().targets).toEqual(states[t]?.targets)
-      for (let e = record.input[next]; e && e.t <= t; e = record.input[++next]) run.push(e)
-    }
+    const replayed: RunState[] = []
+    const result = replaySteps(params, played.input, (state) => replayed.push(state))
+    expect(replayed.slice(0, -1).map((s) => s.targets)).toEqual(states.slice(1).map((s) => s.targets))
+    expect(result).toEqual(played)
+  })
+
+  it('replays input stamped between whole ms (as the shell records it) to the same targets and Score as `replay`', () => {
+    // Real events carry fractional times; a replay that applies them a step early or late moves kills and
+    // everything after them, so this has to hold for a Scenario whose targets depend on when they fell.
+    const params = sw({ seed: 5 })
+    const { result: played } = live(params, trackBot({ leadMs: -100 }))
+    const shifted = played.input.map((e) => ({ ...e, t: e.t + 0.5 }))
+    const canonical = replay(params, shifted)
+    expect(canonical.score).toBeGreaterThan(10)
+    expect(replaySteps(params, shifted, () => undefined)).toEqual(canonical)
+  })
+})
+
+describe('Tracking Runs are stored like any other', () => {
+  it.each(['strafe', 'switch'] as const)('%s survives export and import', async (scenario) => {
+    const params = testParams({ scenario })
+    const record: RunRecord = { ...params, ...testMeta(), ...runBot(params, trackBot({ leadMs: -60 })) }
+    const store = createMemoryStore()
+    await store.save([record])
+    const copy = createMemoryStore()
+    await importData(copy, await exportData(store))
+    expect(await copy.get(record.id)).toEqual(record)
   })
 })

@@ -31,7 +31,7 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   environment (`devicePixelRatio`, `userAgent`, `rawInput`): `movementX/Y` units differ per browser, so old Runs need it to be re-analysed.
 - Storage: `list` returns summaries (no input), `get` the whole record. Importing never deletes; a Run with a known id is replaced.
 - Target log: `spawn` (with the crosshair at spawn), `shot` (`id` or `null` for a miss), `kill`. Replaying the input with
-  `replay(params, input)` rebuilds targets over time for Analysis; no motion samples are logged.
+  `replay(params, input)` returns the result again; `replaySteps` (see Tracking Scenarios) gives the targets and crosshair at every ms for Analysis. No motion samples are logged.
 
 ## Tracking Scenarios (Strafe, Switch)
 - **On-target rule (both):** 1 ms of simulated time counts as on target only while the fire button is held AND the crosshair
@@ -39,26 +39,26 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 - **Strafe:** one target, `Score` = 100 x (on-target ms) / (ms elapsed), so it is a live percentage that is final at 30 s.
   **Switch:** three targets alive; a target falls (`kill`, then a replacement `spawn` at the same `t`) once it has 400 ms
   on target in total. The time is summed per target and kept when the crosshair looks away and comes back. `Score` = falls
-  (at most 75). The replacement appears in the one free spot (24 degrees from where the player was), so the player must switch.
+  (at most 75). There are four spots 24 degrees apart in yaw, three of them taken: the replacement goes to the free one, and
+  the spot it fell from becomes the free one. So it never reappears where it fell and the player has to switch.
 - **Motion** is closed-form in time (`scenarios/wander.ts`: sums of sines, periods and phases from the seed), defined in
   degrees and independent of FOV, Sensitivity, DPI and input. Strafe stays within 24 degrees yaw / 5 pitch of the start
   and peaks near 40 degrees per second; Switch targets drift at up to about 12 degrees per second.
 - **Reading the path (ticket #8, Ahead/Behind):** every moving `Target` in `RunState.targets` carries `speed` (degrees per
-  second on the sphere) and `heading` (direction of travel as a bearing, 0 = up, 90 = right, the `offsetAim` convention). The
-  target log only holds `spawn` and `kill` (no `shot`, no samples), so rebuild the path from the `RunRecord` by replaying its
-  input stepwise through the public interface and reading the state at each ms. Crosshair and targets then come from the same state:
+  second on the sphere) and `heading` (direction of travel as a bearing, 0 = up, 90 = right, the `offsetAim` convention); `RunState.held`
+  is the fire button. The target log only holds `spawn` and `kill` (no `shot`, no motion samples), so get the path from the `RunRecord`
+  by replay: `replaySteps(record, record.input, (state) => ...)` calls back for every simulated step t = 1 ... 30 000 ms with
+  exactly what `Rules.step` saw then (targets at t; crosshair and `held` as the input before t left them). Use it, do not hand-roll
+  a tick-then-events loop: recorded times are fractional (an event at 12.4 ms takes effect from step 13), and applying them a step
+  early or late moves Switch kills and everything after them. This order is a contract the replay depends on.
 ```ts
-const run = createRun(record) // a RunRecord is a RunParams
-let next = 0
-for (let t = 0; t < RUN_DURATION_MS; t++) {
-  run.push({ kind: 'tick', t }) // advances the Scenario to t
-  const { crosshair, targets } = run.state() // as the player saw them at t, targets with position, speed and heading
-  for (let e = record.input[next]; e && e.t <= t; e = record.input[++next]) run.push(e)
-}
+replaySteps(record, record.input, ({ crosshair, held, targets }) => {
+  // per ms: targets[i] has yaw, pitch, radius, speed, heading; on target = held && angleBetween(crosshair, targets[i]) <= radius
+})
 ```
   Signed offset along the direction of travel: take the crosshair's offset from the target in the target's local
   east/north (east = `wrapDeg(dyaw) * cos(pitch)`, north = `dpitch`) and project it on `(sin heading, cos heading)`.
-  Positive is Ahead, negative is Behind. Time on target is `held && angleBetween(crosshair, target) <= radius` per step.
+  Positive is Ahead, negative is Behind. Summing the on-target steps and dividing by 30 000 gives Strafe's Score back exactly.
 
 ## Adding a Scenario
 Implement `ScenarioDefinition` (`rules(seed)` returns `Rules`: `targets`, `events`, `score`, plus `shoot` for Clicking and
