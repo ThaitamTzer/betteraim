@@ -18,6 +18,9 @@ _Avoid_: inches/360
 The sensitivity value as entered in one specific game's settings; meaningless without naming that game and the player's DPI.
 _Avoid_: in-game sens, sens value
 
+**eDPI**:
+DPI multiplied by Game Sensitivity; only comparable within one game, so never used as a Sensitivity.
+
 **DPI**:
 The number of counts a mouse reports per inch of physical movement.
 _Avoid_: CPI
@@ -75,6 +78,20 @@ _Avoid_: flicking scenario
 
 **Tracking Scenario**:
 A Scenario scored on keeping the crosshair on targets over time.
+
+**Flick**:
+A Clicking Scenario with one target at a time, appearing at a wide angle from the crosshair.
+
+**Micro**:
+A Clicking Scenario with small targets appearing close to the crosshair.
+
+**Strafe**:
+A Tracking Scenario with one target that moves and changes direction smoothly.
+_Avoid_: Tracking (that is the category, not this Scenario)
+
+**Switch**:
+A Tracking Scenario with several targets alive at once, each falling after a short stretch of tracking.
+_Avoid_: Switching
 
 **Run**:
 One play-through of a Scenario at a single Sensitivity.
