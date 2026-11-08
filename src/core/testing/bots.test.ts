@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { degreesPerCount } from '../aim'
+import { degreesPerCount, wrapDeg } from '../aim'
 import type { RunResult } from '../types'
-import { aimBot, runBot } from './bots'
+import { aimBot, runBot, trackBot } from './bots'
 import type { Bot } from './bots'
 import { testParams } from './params'
 
@@ -64,5 +64,43 @@ describe('aimBot', () => {
   it('waits for its reaction time before moving', () => {
     const first = runBot(params, aimBot({ reactionMs: 250 })).input.find((e) => e.kind === 'move')
     expect(first?.t).toBeGreaterThanOrEqual(250)
+  })
+})
+
+describe('trackBot', () => {
+  /** Mean signed offset of the crosshair from the Strafe target along the target's heading, and the target's mean speed. */
+  const offsets = (bot: Bot) => {
+    let ahead = 0
+    let speed = 0
+    let n = 0
+    runBot(testParams({ scenario: 'strafe' }), (state) => {
+      const target = state.targets[0]
+      if (target?.heading !== undefined && target.speed !== undefined && state.t > 0) {
+        const heading = (target.heading * Math.PI) / 180
+        const east = wrapDeg(state.crosshair.yaw - target.yaw) * Math.cos((target.pitch * Math.PI) / 180)
+        const north = state.crosshair.pitch - target.pitch
+        ahead += east * Math.sin(heading) + north * Math.cos(heading)
+        speed += target.speed
+        n++
+      }
+      return bot(state)
+    })
+    return { ahead: ahead / n, speed: speed / n }
+  }
+
+  it('is dead on the target by default (it sees the target 1 ms late, about 0.02 degrees)', () => {
+    expect(Math.abs(offsets(trackBot()).ahead)).toBeLessThan(0.05)
+  })
+
+  it('leads the target by its speed times leadMs: Ahead', () => {
+    const { ahead, speed } = offsets(trackBot({ leadMs: 100 }))
+    expect(ahead).toBeCloseTo(speed * 0.1, 1)
+    expect(ahead).toBeGreaterThan(1)
+  })
+
+  it('trails the target by its speed times leadMs when that is negative: Behind', () => {
+    const { ahead, speed } = offsets(trackBot({ leadMs: -100 }))
+    expect(ahead).toBeCloseTo(-speed * 0.1, 1)
+    expect(ahead).toBeLessThan(-1)
   })
 })

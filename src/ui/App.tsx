@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 import { Home } from './screens/Home'
 import { Converter } from './screens/Converter'
 import { Onboarding } from './screens/Onboarding'
+import { Options } from './screens/Options'
 import { Practice } from './screens/Practice'
 import { Result } from './screens/Result'
 import { RunScreen } from './screens/RunScreen'
@@ -15,6 +16,7 @@ const screens: Screens = {
   home: Home,
   onboarding: Onboarding,
   converter: Converter,
+  options: Options,
   practice: Practice,
   run: RunScreen,
   result: Result,
@@ -34,9 +36,14 @@ export function App() {
           <button type="button" className="brand" onClick={() => go({ name: 'home' })}>
             BetterAim
           </button>
-          <button type="button" className="link" onClick={() => go({ name: 'runs' })}>
-            Past Runs
-          </button>
+          <nav className="topnav">
+            <button type="button" className="link" onClick={() => go({ name: 'runs' })}>
+              Past Runs
+            </button>
+            <button type="button" className="link" onClick={() => go({ name: 'options' })}>
+              Options
+            </button>
+          </nav>
         </header>
       )}
       {route.name !== 'run' && <StorageWarning key={`storage-${key}`} />}

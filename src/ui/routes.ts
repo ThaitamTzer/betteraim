@@ -10,6 +10,7 @@ export type Route =
   | { name: 'runs' }
   | { name: 'onboarding' }
   | { name: 'converter' }
+  | { name: 'options' }
   /** Scenario picker; a chosen Scenario is played as a Practice Run with these settings (from the active Game Profile). */
   | { name: 'practice'; sensitivity: number; dpi: number; fov: Fov; gameProfileId: string }
   | {

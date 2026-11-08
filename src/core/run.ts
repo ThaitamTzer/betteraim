@@ -71,12 +71,35 @@ export function createRun(params: RunParams, definition: ScenarioDefinition = ge
           break
       }
     },
-    state: () => ({ t, done, crosshair: aim, targets: rules.targets, score: rules.score }),
+    state: () => ({ t, done, crosshair: aim, held, targets: rules.targets, score: rules.score }),
     result() {
       if (!done) throw new Error('Run is not done')
       return { input: [...input], targetEvents: [...rules.events], score: rules.score }
     },
   }
+}
+
+/**
+ * Replays recorded input like `replay` and calls `onStep` for every simulated step t = 1, 2, ... 30 000 ms (the steps
+ * `Rules.step` sees) with exactly what that step saw: targets at t, and the crosshair and fire button as input before t left
+ * them. Input stamped 12.4 therefore counts from step 13, one stamped exactly 13 from step 14, as live; a hand-written
+ * tick-then-events loop gets this wrong for fractional times. Analysis reads the crosshair and the targets (position, speed,
+ * heading) over time from a RunRecord with this, and time on target is `held` with the crosshair within a target's radius.
+ */
+export function replaySteps(
+  params: RunParams,
+  input: readonly RecordedInput[],
+  onStep: (state: RunState) => void,
+  definition?: ScenarioDefinition,
+): RunResult {
+  const run = createRun(params, definition)
+  let next = 0
+  for (let t = STEP_MS; t <= RUN_DURATION_MS; t += STEP_MS) {
+    for (let e = input[next]; e && e.t < t; e = input[++next]) run.push(e)
+    run.push({ kind: 'tick', t })
+    onStep(run.state())
+  }
+  return run.result()
 }
 
 /** Re-runs recorded input and returns what the core produces for it. Ends the Run with a final tick. */

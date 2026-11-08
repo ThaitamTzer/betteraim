@@ -3,6 +3,7 @@ import { exportData, ImportError, importData } from '../../core'
 import type { RunSummary } from '../../core'
 import { runStore } from '../../storage/runs'
 import type { ScreenProps } from '../routes'
+import { formatScore } from '../score'
 
 type Notice = { kind: 'ok' | 'problem'; text: string }
 
@@ -103,7 +104,7 @@ export function Runs({ go }: ScreenProps<'runs'>) {
                 <tr key={r.id}>
                   <td>{new Date(r.startedAt).toLocaleString()}</td>
                   <td>{capitalize(r.scenario)}</td>
-                  <td>{r.score.toFixed(1)}</td>
+                  <td>{formatScore(r.scenario, r.score)}</td>
                   <td>{r.sensitivity} cm/360</td>
                   <td>
                     {capitalize(r.mode)}

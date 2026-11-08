@@ -6,6 +6,7 @@ import {
   gameProfiles,
   gameSensitivityFor,
   getGameProfile,
+  practiceFov,
   profileFov,
   readSensitivity,
 } from './game-profiles'
@@ -98,5 +99,19 @@ describe('profileFov', () => {
     expect(verticalFovDeg(fov, 21 / 9)).toBeCloseTo(fov.degrees, 12)
     const horizontal = 2 * Math.atan(Math.tan((fov.degrees * Math.PI) / 360) * (16 / 9)) * (180 / Math.PI)
     expect(horizontal).toBeCloseTo(106.26, 2)
+  })
+})
+
+describe('practiceFov', () => {
+  it('is the Game Profile FOV when there is no override', () => {
+    for (const { id } of gameProfiles) {
+      expect(practiceFov(id)).toEqual(profileFov(id))
+      expect(practiceFov(id, null)).toEqual(profileFov(id))
+    }
+  })
+
+  it('takes the override as horizontal degrees on 16:9, so the Valorant value 103 gives the Valorant FOV', () => {
+    expect(practiceFov('valorant', 103).degrees).toBeCloseTo(profileFov('valorant').degrees, 9)
+    expect(practiceFov('cs2', 90)).toEqual({ degrees: expect.closeTo(58.72, 2), axis: 'vertical' })
   })
 })

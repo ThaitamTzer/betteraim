@@ -13,7 +13,7 @@ export interface Scene3D {
 }
 
 /** Draws RunState: a camera at the crosshair's yaw/pitch, one sphere per target. `edgeArrow` points at an off-screen target. */
-export function createScene(canvas: HTMLCanvasElement, fov: Fov, edgeArrow: HTMLElement): Scene3D {
+export function createScene(canvas: HTMLCanvasElement, fov: Fov, edgeArrow: HTMLElement, targetColor: THREE.ColorRepresentation = 0xffb35c): Scene3D {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
@@ -34,7 +34,7 @@ export function createScene(canvas: HTMLCanvasElement, fov: Fov, edgeArrow: HTML
   camera.rotation.order = 'YXZ'
 
   const geometry = new THREE.SphereGeometry(1, 28, 20)
-  const material = new THREE.MeshBasicMaterial({ color: 0xffb35c })
+  const material = new THREE.MeshBasicMaterial({ color: targetColor })
   const meshes = new Map<number, THREE.Mesh>()
 
   const resize = () => {
