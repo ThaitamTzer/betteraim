@@ -6,7 +6,7 @@ import type { RunRecord } from './types'
 
 const records = (): RunRecord[] => [
   testRecord({ seed: 1 }, { id: 'a', startedAt: 1_000, sessionId: 's1', warmup: true }),
-  testRecord({ seed: 2, sensitivity: 31.7, dpi: 1600 }, { id: 'b', startedAt: 2_000, sessionId: 's1' }),
+  testRecord({ seed: 2, sensitivity: 31.7, dpi: 1600 }, { id: 'b', startedAt: 2_000, sessionId: 's1', levels: 7 }),
   testRecord(
     { seed: 3, fov: { degrees: 90, axis: 'vertical' } },
     { id: 'c', startedAt: 3_000, mode: 'finder', env: { devicePixelRatio: 1.25, userAgent: 'Firefox/152', rawInput: false } },
@@ -73,6 +73,7 @@ describe('exporting and importing', () => {
       'a capture environment that is not an object': (f) => stringify({ ...f, runs: [{ ...f.runs[0], env: 'Chrome' }, ...f.runs.slice(1)] }),
       'a malformed capture environment': (f) =>
         stringify({ ...f, runs: [{ ...f.runs[0], env: { ...f.runs[0].env, devicePixelRatio: 'wide' } }, ...f.runs.slice(1)] }),
+      'a level count that is not a whole number': (f) => stringify({ ...f, runs: [{ ...f.runs[0], levels: 7.5 }, ...f.runs.slice(1)] }),
       'a missing id': (f) => stringify({ ...f, runs: [{ ...f.runs[0], id: '' }, ...f.runs.slice(1)] }),
       'input that is not base64': (f) => stringify({ ...f, runs: [{ ...f.runs[0], input: '***' }, ...f.runs.slice(1)] }),
       'truncated input': (f) => stringify({ ...f, runs: [{ ...f.runs[0], input: f.runs[0].input.slice(0, 36) }, ...f.runs.slice(1)] }),

@@ -64,6 +64,7 @@ function fail(message: string): never {
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v)
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 const isPositive = (v: unknown): v is number => isNum(v) && v > 0
+const isCount = (v: unknown): v is number => Number.isInteger(v) && (v as number) > 0
 const isText = (v: unknown): v is string => typeof v === 'string'
 const isId = (v: unknown): v is string => isText(v) && v !== ''
 const isBool = (v: unknown): v is boolean => typeof v === 'boolean'
@@ -108,6 +109,7 @@ function parseRun(raw: unknown): RunRecord {
         rawInput: field(env, 'rawInput', isBool, 'true or false'),
       },
     }),
+    ...(raw.levels === undefined ? {} : { levels: field(raw, 'levels', isCount, 'a whole number above 0') }), // Finder Runs only
     score: field(raw, 'score', isNum, 'a number'),
   }
   try {
