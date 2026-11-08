@@ -31,8 +31,10 @@ export const dot = (a: Vec, b: Vec): number => a[0] * b[0] + a[1] * b[1] + a[2] 
 export const cross = (a: Vec, b: Vec): Vec => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
 
 /** True angular distance between two directions, in degrees (never the flat yaw/pitch distance). */
-export const angleBetween = (a: Aim, b: Aim): number => {
-  const [ax, ay, az] = directionOf(a)
+export const angleBetween = (a: Aim, b: Aim): number => angleFrom(directionOf(a), b)
+
+/** `angleBetween` with the first direction already worked out: a loop over many targets (or steps) from one crosshair computes `directionOf` once. */
+export const angleFrom = ([ax, ay, az]: Vec, b: Aim): number => {
   const [bx, by, bz] = directionOf(b)
   const cross = Math.hypot(ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx)
   return Math.atan2(cross, ax * bx + ay * by + az * bz) * DEG

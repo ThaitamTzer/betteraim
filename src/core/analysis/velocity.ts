@@ -27,14 +27,16 @@ const kernel = (() => {
   return weights.map((w) => w / sum)
 })()
 
-const smooth = (steps: readonly number[]): number[] =>
-  steps.map((_, i) => {
+const smooth = (steps: readonly number[]): number[] => {
+  const out = new Array<number>(steps.length)
+  for (let i = 0; i < steps.length; i++) {
     let sum = 0
-    for (let k = Math.max(0, i - KERNEL_RADIUS); k <= Math.min(steps.length - 1, i + KERNEL_RADIUS); k++) {
-      sum += (steps[k] ?? 0) * (kernel[k - i + KERNEL_RADIUS] ?? 0)
-    }
-    return sum * 1000
-  })
+    const to = Math.min(steps.length - 1, i + KERNEL_RADIUS)
+    for (let k = Math.max(0, i - KERNEL_RADIUS); k <= to; k++) sum += steps[k]! * kernel[k - i + KERNEL_RADIUS]!
+    out[i] = sum * 1000
+  }
+  return out
+}
 
 /**
  * Smoothed speed in deg/s, one value per ms. `along[i]` and `across[i]` are the signed degrees the crosshair moved
