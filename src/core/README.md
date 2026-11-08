@@ -7,6 +7,9 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 - `types.ts` shared types. `aim.ts` degrees per count, sphere geometry (`angleBetween`, `offsetAim`, `aimDelta`), FOV.
 - `run.ts` the engine: `createRun(params)`, `replay`. `scenario.ts` what a Scenario implements (`Rules`).
 - `scenarios/` `clicking.ts` (shared by Flick and Micro), `flick.ts`, `micro.ts`, `index.ts` (the registry, one line per Scenario).
+- `analysis/` `analyseRun(run)`: Run Analysis, a union on Scenario category. Clicking (#7) is implemented, `tracking` is a stub for
+  #8. It replays `input` to rebuild the crosshair path, so a `RunRecord` is all it needs. `clicking.ts` Aim Movements, Ideal Path and
+  classification; `velocity.ts` smoothing, peaks and the thresholds (read its header before changing one).
 - `rng.ts` `createRng(seed)`. `tally.ts` `tallyShots`. `testing/` bots and test params (tests only).
 - `codec.ts` lossless binary form of `input` and `targetEvents` (+ base64). `storage.ts` the `RunStore` port (`save`, `list(filter)`
   summaries, `get`) and `createMemoryStore()` for tests. `exchange.ts` `exportData`/`importData`: one versioned JSON file, validated
@@ -16,7 +19,7 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   value with its source), the Game Sensitivity <-> cm/360 formulas, the Converter (`convertSensitivity`, `readSensitivity`) and
   `profileFov(id)`, the `Fov` a Run renders with (always vertical, so a horizontal FOV on a 4:3 or 16:9 base is Hor+).
   A Game Profile id (`GameProfileId`) is what `RunMeta.gameProfileId` holds. Add a game by adding one entry to the table.
-- Not here yet: Analysis (#7, #8), Finder (#9-#11), AI Coach (#14, #15).
+- Not here yet: Tracking Analysis (#8), Finder (#9-#11), AI Coach (#14, #15).
 
 ## Conventions
 - Units: degrees, ms since Run start, Sensitivity = cm/360. Yaw > 0 is right, pitch > 0 is up (crosshair pitch is clamped to
@@ -52,7 +55,9 @@ const lagging: Bot = (s) => {
   return past && { turn: aimDelta(s.crosshair, past), fire: true }
 }
 ```
-Overshoot, undershoot and reaction time are covered in `testing/bots.test.ts`.
+Overshoot, undershoot and reaction time are covered in `testing/bots.test.ts`. `lineBot({ bursts, burstMs, pauseMs, bow })` follows
+the great circle to the target (`aimBot` interpolates in yaw/pitch, so it drifts off the Ideal Path): one push is smooth, several
+are jerky, `bow` bends it sideways. Analysis tests (`analysis/clicking.test.ts`) run bots at several Sensitivity/DPI settings.
 
 ## Determinism rules
 - Randomness only from `createRng(seed)`, with a number of draws that does not depend on input (Finder Runs share a seed
