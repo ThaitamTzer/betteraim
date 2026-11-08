@@ -52,9 +52,36 @@ export interface ClickingAnalysis {
   smoothness: number
 }
 
-/** Ticket #8 adds the Tracking metrics (Ahead/Behind, time on target). */
+/**
+ * Whether the crosshair led the target's motion, trailed it, or rode with it (within a small dead zone). Not `Outcome`:
+ * Overshoot and Undershoot belong to Aim Movements, and "on-target" there means something else than Time on Target.
+ */
+export type Lead = 'ahead' | 'behind' | 'level'
+
+/**
+ * A Tracking Run. The counts (`samples`, `timeOnTargetMs`) come next to the averages so several Runs can be pooled with
+ * the right weights: mean offset and mouse speed by `samples`, time on target by Run length.
+ */
 export interface TrackingAnalysis {
   category: 'tracking'
+  /**
+   * Ahead/Behind: mean signed offset of the crosshair from the target along the target's direction of travel, in
+   * degrees. Positive is Ahead (leading the motion), negative is Behind (trailing it). 0 when `samples` is 0.
+   */
+  meanOffset: number
+  /** `meanOffset` in plain words (see `leadOf`). `level` when `samples` is 0, so check that first. */
+  lead: Lead
+  /** The 1 ms steps `meanOffset` and `mouseSpeed` average over: fire held, crosshair within the tracking window of a moving target. */
+  samples: number
+  /** Time on Target: ms of the Run with the fire button held and the crosshair on a target, the same rule that scores. */
+  timeOnTargetMs: number
+  /** `timeOnTargetMs` as a share (0 to 1) of the whole Run; x 100 is Strafe's Score. */
+  timeOnTargetShare: number
+  /**
+   * Mouse speed: how fast the crosshair moved over the sampled steps, in deg/s. Angular, not cm/s, so it can be
+   * compared between Sensitivities. 0 when `samples` is 0.
+   */
+  mouseSpeed: number
 }
 
 /** The result of analysing one Run, discriminated on the Scenario's category. */

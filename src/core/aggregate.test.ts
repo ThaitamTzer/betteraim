@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { aggregateRuns, byDay, bySession, createMemoryStore, loadAnalysed, tallyShots } from './index'
-import type { AnalysedRun, ClickingAnalysis } from './index'
+import { aimDelta, aggregateRuns, analyseRun, byDay, bySession, createMemoryStore, leadOf, loadAnalysed, tallyShots } from './index'
+import type { AnalysedRun, ClickingAnalysis, Metrics, TrackingAnalysis } from './index'
 import { aimBot, missBot, trackBot } from './testing/bots'
+import type { Bot } from './testing/bots'
 import { testRecord } from './testing/records'
 
 const HOUR = 3_600_000
 const clicking = (a: AnalysedRun['analysis']): ClickingAnalysis => {
   if (a.category !== 'clicking') throw new Error('expected a Clicking Analysis')
+  return a
+}
+const tracking = (a: AnalysedRun['analysis'] | Metrics): TrackingAnalysis => {
+  if (a.category !== 'tracking') throw new Error('expected a Tracking Analysis')
   return a
 }
 
@@ -84,7 +89,7 @@ describe('aggregating Runs from the store', () => {
     ])
   })
 
-  it('gives a Tracking Scenario its Score per Scenario and an empty slot for the Tracking metrics', async () => {
+  it('gives a Tracking Scenario its Score per Scenario, never mixed with another Scenario', async () => {
     const store = createMemoryStore()
     const records = [
       testRecord({ scenario: 'strafe', seed: 1 }, { id: 's1', startedAt: 10 }, trackBot()),
@@ -103,6 +108,42 @@ describe('aggregating Runs from the store', () => {
     expect(strafe?.score.mean).toBeCloseTo((records[0]!.score + records[1]!.score) / 2, 10)
     expect(strafe?.score.best).toBe(Math.max(records[0]!.score, records[1]!.score))
     expect(sw?.score).toEqual({ mean: records[2]!.score, best: records[2]!.score })
+  })
+
+  it('pools Tracking metrics by sample count and Run length, not by averaging per-Run values', async () => {
+    // Run b tracks for 10 s trailing the target, then looks away: far fewer samples than run a, which leads for the full 30 s.
+    const awayAfter10s = (): Bot => {
+      const tracker = trackBot({ leadMs: -100 })
+      return (state) => (state.t < 10_000 ? tracker(state) : { turn: aimDelta(state.crosshair, { yaw: 0, pitch: -70 }), fire: true })
+    }
+    const a = testRecord({ scenario: 'strafe', seed: 1 }, { id: 'a', startedAt: 10 }, trackBot({ leadMs: 100 }))
+    const b = testRecord({ scenario: 'strafe', seed: 2 }, { id: 'b', startedAt: 20 }, awayAfter10s())
+    const store = createMemoryStore()
+    await store.save([a, b])
+    const [strafe] = aggregateRuns(await loadAnalysed(store)).scenarios
+    const [x, y] = [analyseRun(a), analyseRun(b)].map(tracking)
+    expect(strafe?.metrics.category).toBe('tracking')
+    const pooled = tracking(strafe!.metrics)
+
+    // The two Runs really differ, otherwise this test could not tell pooling from averaging.
+    expect(x!.samples).toBeGreaterThan(2 * y!.samples)
+    expect(x!.meanOffset).toBeGreaterThan(1)
+    expect(y!.meanOffset).toBeLessThan(-1)
+    expect(pooled.samples).toBe(x!.samples + y!.samples)
+    expect(pooled.meanOffset).toBeCloseTo((x!.meanOffset * x!.samples + y!.meanOffset * y!.samples) / pooled.samples, 10)
+    expect(pooled.meanOffset).not.toBeCloseTo((x!.meanOffset + y!.meanOffset) / 2, 1)
+    expect(pooled.mouseSpeed).toBeCloseTo((x!.mouseSpeed * x!.samples + y!.mouseSpeed * y!.samples) / pooled.samples, 10)
+    expect(pooled.timeOnTargetMs).toBe(x!.timeOnTargetMs + y!.timeOnTargetMs)
+    expect(pooled.timeOnTargetShare).toBeCloseTo((x!.timeOnTargetMs + y!.timeOnTargetMs) / 60_000, 10)
+    // Ahead/Behind is read from the pooled mean with the same dead zone as a single Run.
+    expect(pooled.lead).toBe(leadOf(pooled.meanOffset))
+  })
+
+  it('pools a Tracking Scenario that nobody tracked to zeros, not to NaN', async () => {
+    const store = createMemoryStore()
+    await store.save([testRecord({ scenario: 'switch' }, { id: 'idle' }, () => undefined)])
+    const [sw] = aggregateRuns(await loadAnalysed(store)).scenarios
+    expect(tracking(sw!.metrics)).toMatchObject({ samples: 0, meanOffset: 0, mouseSpeed: 0, timeOnTargetMs: 0, timeOnTargetShare: 0 })
   })
 
   it('aggregates nothing for no Runs', () => {

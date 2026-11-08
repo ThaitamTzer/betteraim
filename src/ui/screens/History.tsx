@@ -10,7 +10,7 @@ import { useAnalysed } from '../useAnalysed'
 import '../summary.css'
 
 // Which metrics share a chart: the two rates are on one scale and read best together.
-const chartGroups = [['accuracy'], ['overshootRate', 'undershootRate'], ['pathDeviation'], ['smoothness']]
+const chartGroups = [['accuracy'], ['overshootRate', 'undershootRate'], ['pathDeviation'], ['smoothness'], ['timeOnTarget'], ['aheadBehind']]
 
 export function History({ go }: ScreenProps<'history'>) {
   const loaded = useAnalysed()
