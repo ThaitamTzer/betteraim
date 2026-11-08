@@ -92,6 +92,11 @@ export interface RunMeta {
   sessionId?: string
   /** The shell sets it on every Run; absent only in Runs imported from before it was captured. */
   env?: RunEnv
+  /**
+   * Finder Runs only: how many Sensitivity levels each Scenario is played at in this Session. Lets the Finder fit tell a
+   * complete (Session, Scenario) pair (that many counted Runs) from one an abandoned Session left incomplete.
+   */
+  levels?: number
 }
 
 export interface RunResult {

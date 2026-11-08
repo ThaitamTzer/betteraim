@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import type { Fov, RunMeta, RunParams, RunRecord } from '../core'
+import type { FinderSession, FinderStep } from './finder'
 
 /**
  * Every screen of the app. To add a screen: add a member here, a component in screens/, and one line to
@@ -24,9 +25,18 @@ export type Route =
       params: RunParams
       /** Everything about the Run that is not core input; the id, start time and capture env are added when it starts. */
       meta: Omit<RunMeta, 'id' | 'startedAt' | 'env'>
-      /** Where to go when the Run ends; a Finder Session would chain the next Run here. */
+      /** Where to go when the Run ends; a Finder Session chains the next Run here. */
       next: (record: RunRecord) => Route
+      /**
+       * Set for a Finder Run. Escape then abandons just this Run and goes to `onAbandon` (Practice retries in place),
+       * and a lock that is not raw never starts the Run and goes to `onNotRaw`. `label` is the progress shown on the start card.
+       */
+      session?: { label: string; onAbandon: Route; onNotRaw: Route }
     }
+  /** Sensitivity Finder entry: what a Session is, then Start. */
+  | { name: 'finder' }
+  /** Between the Runs of a Finder Session; `last` is the Run that just finished (rest only). The topbar is hidden here. */
+  | { name: 'finderSession'; session: FinderSession; step: FinderStep; last?: RunRecord }
   /** `more` goes to the next pick of the same Session (the Practice picker); absent when the Session has no picker. */
   | { name: 'result'; record: RunRecord; again: Route; more?: Route }
 

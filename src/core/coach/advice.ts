@@ -88,7 +88,11 @@ The figures:
 - pathDeviation: how far, in degrees, an Aim Movement strays from the straight line to the target (lower is straighter).
 - smoothness: velocity peaks per Aim Movement. 1 is one clean push; higher means more corrections.
 - mouseSpeed: degrees per second during Aim Movements.
-- Tracking Scenarios carry other figures named for what they measure. Ahead/Behind is where the crosshair is along the target's direction of travel: positive is ahead of it, negative is behind it.`
+- Tracking Scenarios (Strafe, Switch) carry these instead:
+  - timeOnTargetShare: the share (0 to 1) of the Run with the fire button held and the crosshair on a target. timeOnTargetMs is the same in milliseconds.
+  - meanOffset: Ahead/Behind, the mean distance in degrees of the crosshair from the target along the target's direction of travel. Positive is ahead of the target, negative is behind it, near 0 is level.
+  - samples: how many 1 ms steps meanOffset and mouseSpeed average over. With 0 samples there is nothing to read from them.
+  - mouseSpeed: degrees per second of the crosshair over those steps.`
 
 /**
  * Asks the AI Coach for written advice on a Practice Session: one request, no retry, called only when the player asks.

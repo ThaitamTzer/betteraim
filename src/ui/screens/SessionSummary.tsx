@@ -41,7 +41,7 @@ export function SessionSummary({ route, go }: ScreenProps<'session'>) {
   }
 
   const { scenarios, warmups } = aggregateRuns(items)
-  // Only the metrics that at least one Scenario measured get a column (Tracking metrics appear once #8 produces them).
+  // Only the metrics that at least one Scenario measured get a column.
   const columns = metrics.filter((m) => scenarios.some((s) => m.pick(s.metrics) !== null))
   const counted = scenarios.reduce((n, s) => n + s.runs, 0)
   const first = items[0]!.run
@@ -92,7 +92,7 @@ export function SessionSummary({ route, go }: ScreenProps<'session'>) {
             </table>
           </div>
           <p className="hint">
-            Metrics pool every shot and Aim Movement of a Scenario's Runs, so a Run with more of them counts for more. Scores
+            Metrics pool every shot, Aim Movement and millisecond of tracking of a Scenario's Runs, so a Run with more of them counts for more. Scores
             of different Scenarios are in different units and are not comparable.
           </p>
         </>

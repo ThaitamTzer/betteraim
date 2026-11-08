@@ -1,5 +1,6 @@
-import { analyseRun } from './analysis'
+import { analyseRun, leadOf } from './analysis'
 import type { ClickingAnalysis, RunAnalysis, TrackingAnalysis } from './analysis'
+import { RUN_DURATION_MS } from './scenario'
 import type { RunFilter, RunStore, RunSummary } from './storage'
 import type { ScenarioId } from './types'
 
@@ -43,14 +44,8 @@ export async function loadAnalysed(store: RunStore, filter?: RunFilter, cache = 
 /** The Analysis of several Clicking Runs pooled into one: the same figures as `ClickingAnalysis`, minus the movement list. */
 export type ClickingMetrics = Omit<ClickingAnalysis, 'movements'>
 
-/**
- * Pooled Tracking metrics.
- * Extension point for ticket #8: add the pooled time on target and Ahead/Behind here, computed in `poolTracking` from the
- * counts of `TrackingAnalysis` (never by averaging rates), and add their columns to the screens (src/ui/metrics.ts).
- */
-export interface TrackingMetrics {
-  category: 'tracking'
-}
+/** The Analysis of several Tracking Runs pooled into one: the same figures as `TrackingAnalysis`, with `samples` and `timeOnTargetMs` summed. */
+export type TrackingMetrics = TrackingAnalysis
 
 export type Metrics = ClickingMetrics | TrackingMetrics
 
@@ -99,8 +94,23 @@ function poolClicking(list: readonly ClickingAnalysis[]): ClickingMetrics {
   }
 }
 
-// Nothing to pool until ticket #8 gives TrackingAnalysis its metrics.
-const poolTracking = (_list: readonly TrackingAnalysis[]): TrackingMetrics => ({ category: 'tracking' })
+function poolTracking(list: readonly TrackingAnalysis[]): TrackingMetrics {
+  const sumOf = (pick: (a: TrackingAnalysis) => number) => list.reduce((s, a) => s + pick(a), 0)
+  const samples = sumOf((a) => a.samples)
+  // A Run's mean counts for as many steps as it was measured over; a Run with no sample counts for nothing.
+  const bySamples = (pick: (a: TrackingAnalysis) => number) => ratio(sumOf((a) => pick(a) * a.samples), samples)
+  const meanOffset = bySamples((a) => a.meanOffset)
+  const timeOnTargetMs = sumOf((a) => a.timeOnTargetMs)
+  return {
+    category: 'tracking',
+    meanOffset,
+    lead: leadOf(meanOffset),
+    samples,
+    timeOnTargetMs,
+    timeOnTargetShare: ratio(timeOnTargetMs, list.length * RUN_DURATION_MS),
+    mouseSpeed: bySamples((a) => a.mouseSpeed),
+  }
+}
 
 const byTime = (a: AnalysedRun, b: AnalysedRun) => a.run.startedAt - b.run.startedAt || (a.run.id < b.run.id ? -1 : a.run.id > b.run.id ? 1 : 0)
 

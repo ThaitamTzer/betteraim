@@ -1,0 +1,23 @@
+.session-progress {
+  display: block;
+  width: 100%;
+  height: 0.5rem;
+  margin: 1rem 0 0.5rem;
+  border: 0;
+  border-radius: 4px;
+  background: var(--line);
+  accent-color: var(--accent);
+  overflow: hidden;
+}
+
+.session-progress::-webkit-progress-bar {
+  background: var(--line);
+}
+
+.session-progress::-webkit-progress-value {
+  background: var(--accent);
+}
+
+.session-progress::-moz-progress-bar {
+  background: var(--accent);
+}

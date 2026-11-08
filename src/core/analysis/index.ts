@@ -1,7 +1,9 @@
 import { getScenario } from '../scenarios'
 import { analyseClicking } from './clicking'
+import { analyseTracking } from './tracking'
 import type { RunAnalysis, RunData } from './types'
 
+export { leadOf } from './tracking'
 export type * from './types'
 
 /**
@@ -13,6 +15,6 @@ export function analyseRun(run: RunData): RunAnalysis {
     case 'clicking':
       return analyseClicking(run)
     case 'tracking':
-      return { category: 'tracking' }
+      return analyseTracking(run)
   }
 }

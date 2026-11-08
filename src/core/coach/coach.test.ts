@@ -92,7 +92,11 @@ describe('Practice advice', () => {
     expect(flick.category).toBe('clicking')
     expect(flick.score.unit).toMatch(/accuracy/)
     expect(flick.metrics).toMatchObject({ overshootRate: expect.any(Number), pathDeviation: expect.any(Number), smoothness: expect.any(Number) })
-    expect(payload.scenarios.find((s) => s.name === 'Strafe')!.category).toBe('tracking')
+    // Tracking Analysis (ticket #8) arrives as plain numbers too: a bot 100 ms late is Behind, so its offset is negative.
+    const strafeFigures = payload.scenarios.find((s) => s.name === 'Strafe')!
+    expect(strafeFigures.category).toBe('tracking')
+    expect(strafeFigures.metrics).toMatchObject({ timeOnTargetShare: expect.any(Number), samples: expect.any(Number), mouseSpeed: expect.any(Number) })
+    expect(strafeFigures.metrics.meanOffset).toBeLessThan(0)
   })
 
   it('refuses to ask about a Session with nothing counted', async () => {
