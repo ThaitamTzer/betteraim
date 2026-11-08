@@ -24,7 +24,15 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   (rates recomputed from pooled counts, Warm-up Runs only counted in `warmups`), `groupRuns(items, keyOf)` for any grouping, with `bySession`
   and `byDay(items, dayOf)` on top (the shell supplies `dayOf`: the core has no time zone). `loadAnalysed(store, filter, cache?)` lists, loads and
   analyses Runs (about 100 ms per Run: pass a `Map` cache when you load more than once). `poolTracking` pools `TrackingMetrics` (= `TrackingAnalysis`) by sample count and Run length. Ticket #14/#15 reuse it on their own groupings.
-- Not here yet: Finder (#9-#11), AI Coach (#14, #15).
+- `coach/` the AI Coach (ADR-0003), network-free. `provider.ts` is the port: `CoachProvider.complete({ system, prompt, json? })` returns the model's text
+  (`json: { name, schema }` asks for a JSON reply: free text and structured are one call, so an operation never changes an adapter), and
+  `CoachError` with a `kind` (`refusal | network | auth | rate-limit | malformed | provider`) whose message is written for the player.
+  `advice.ts` `practiceAdvice(provider, { items, language })` builds the payload (`buildAdvicePayload`: `aggregateRuns` figures only, copied as
+  numbers, so no Aim Movement list or input can get in) and one prompt, with the reply language in the system prompt. `json.ts` `askJson(provider,
+  { system, prompt, name, schema })` is the structured operation: it states the schema in the prompt too, parses (a code fence is tolerated) and
+  checks the reply against the schema (`schemaError`), throwing `malformed` otherwise. Ticket #15 builds the Recommended Sensitivity on `askJson`
+  (its guardrail, retry and cache belong in the core, next to it). Adapters and the key store are shell code in `src/coach/`: no retry loops, one request per press.
+- Not here yet: Finder (#9-#11), the AI Coach's Recommended Sensitivity (#15).
 
 ## Conventions
 - Units: degrees, ms since Run start, Sensitivity = cm/360. Yaw > 0 is right, pitch > 0 is up (crosshair pitch is clamped to
