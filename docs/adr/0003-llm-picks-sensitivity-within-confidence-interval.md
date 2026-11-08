@@ -10,6 +10,6 @@ An on-device statistical model fits the Performance Curve over every Sensitivity
 ## Consequences
 
 - The LLM receives per-Sensitivity aggregates and the fitted curve, never raw mouse data.
-- It is called at the lowest temperature and its answer is cached per data snapshot, so the same data always shows the same number.
+- Its answer is cached per data snapshot, so the same data always shows the same number. Reproducibility cannot come from sampling settings: current Claude models reject `temperature`, so it is only sent (as 0) to OpenAI-compatible endpoints that accept it.
 - An answer outside the interval is retried once, then replaced by the Curve Peak with a visible notice.
 - Without an API key, the Recommended Sensitivity is the Curve Peak.
