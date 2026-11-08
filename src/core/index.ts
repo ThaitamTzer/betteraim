@@ -10,6 +10,9 @@ export { decodeInput, decodeTargetEvents, encodeInput, encodeTargetEvents, fromB
 export { EXPORT_FORMAT, EXPORT_VERSION, exportData, ImportError, importData, parseExport } from './exchange'
 export { coarseLevels, ENOUGH_HALF_WIDTH, fitFinder, INTERVAL_LEVEL, planSession, recommend } from './finder'
 export type { FinderFit, FitOptions, FitReason, PlannedRun } from './finder'
+// Finder phases, Reset Finder and per-category curves (#11)
+export { FINE_HALF_WIDTH, FINE_SPREAD, nextSession } from './finder'
+export type { NextReason, NextSession } from './finder'
 export { cm360For, convertSensitivity, eDpi, gameProfiles, gameSensitivityFor, getGameProfile, isGameProfileId, practiceFov, profileFov, readSensitivity } from './game-profiles'
 export type { GameFov, GameProfile, GameProfileId, SensitivityReading } from './game-profiles'
 export { createRng } from './rng'
