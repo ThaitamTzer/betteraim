@@ -3,7 +3,7 @@ import type { GameProfileId } from '../core'
 
 /**
  * What the player told BetterAim about their setup, kept in localStorage. To add a setting: add a field here, read it in
- * `parse` (falling back to a default when an older save lacks it) and write it through `saveSettings`.
+ * `parseSettings` (falling back to a default when an older save lacks it) and write it through `saveSettings`.
  */
 export interface Settings {
   gameProfileId: GameProfileId
@@ -21,7 +21,8 @@ export const validSetup = (id: GameProfileId, gameSensitivity: number, dpi: numb
   return cm360 >= 0.1 && cm360 <= 1000
 }
 
-const parse = (raw: unknown): Settings | null => {
+/** A saved or imported setup, or null when it is not one (an unknown game, or a DPI or Game Sensitivity nobody can have). */
+export const parseSettings = (raw: unknown): Settings | null => {
   if (typeof raw !== 'object' || raw === null) return null
   const { gameProfileId, gameSensitivity, dpi } = raw as Record<string, unknown>
   if (typeof gameProfileId !== 'string' || !isGameProfileId(gameProfileId)) return null
@@ -36,7 +37,7 @@ let session: Settings | null = null
 export const loadSettings = (): Settings | null => {
   try {
     const stored = localStorage.getItem(KEY)
-    if (stored !== null) return parse(JSON.parse(stored))
+    if (stored !== null) return parseSettings(JSON.parse(stored))
   } catch {
     // unreadable storage or corrupt JSON: treat as a first visit
   }

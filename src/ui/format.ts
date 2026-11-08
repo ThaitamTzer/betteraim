@@ -6,3 +6,6 @@ export const localDay = (startedAt: number): string => {
   const d = new Date(startedAt)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+
+/** What to show a player for a caught error. */
+export const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error))

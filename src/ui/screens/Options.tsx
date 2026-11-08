@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { cm360For, convertSensitivity, eDpi, getGameProfile } from '../../core'
 import type { GameProfileId } from '../../core'
 import { createHitSound } from '../../audio/hit-sound'
 import { CoachSection } from '../CoachSection'
 import { Crosshair } from '../Crosshair'
+import { ExportImport } from '../ExportImport'
 import { CheckField, ColorField, GameSelect, NumberField, RangeField, Select } from '../fields'
 import { fmt } from '../format'
 import { loadPlayerContext, savePlayerContext } from '../player-context'
@@ -28,20 +29,38 @@ export function Options({ go }: ScreenProps<'options'>) {
     setPrefs(next)
     savePreferences(next)
   }
+  // An import replaces the saved setup, Options and Player Context: remount the sections that read them when they open.
+  const [imports, setImports] = useState(0)
   return (
     <main className="page options">
       <p className="eyebrow">Options</p>
       <h1>Make it yours.</h1>
       <p className="lede">Choices are saved in this browser as you make them. Your setup has its own Save button.</p>
 
-      <SetupSection />
-      <CrosshairSection prefs={prefs} update={update} />
-      <TargetSection prefs={prefs} update={update} />
-      <ControlsSection prefs={prefs} update={update} />
-      <HitSoundSection prefs={prefs} update={update} />
-      <FovSection prefs={prefs} update={update} />
-      <CoachSection />
-      <PlayerContextSection />
+      <Fragment key={imports}>
+        <SetupSection />
+        <CrosshairSection prefs={prefs} update={update} />
+        <TargetSection prefs={prefs} update={update} />
+        <ControlsSection prefs={prefs} update={update} />
+        <HitSoundSection prefs={prefs} update={update} />
+        <FovSection prefs={prefs} update={update} />
+        <CoachSection />
+        <PlayerContextSection />
+      </Fragment>
+
+      <section>
+        <h2>Your data</h2>
+        <p className="hint">
+          Export your Runs, setup, Options and Player Context as one file, to keep a copy or to move to another browser. Your AI Coach key is never in it. Importing adds the
+          file's Runs to yours and replaces your setup, Options and Player Context with the file's.
+        </p>
+        <ExportImport
+          onImported={() => {
+            setPrefs(loadPreferences())
+            setImports((n) => n + 1)
+          }}
+        />
+      </section>
 
       <div className="actions">
         <button type="button" onClick={() => go({ name: 'home' })}>

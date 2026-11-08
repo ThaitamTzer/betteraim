@@ -15,7 +15,7 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 - `codec.ts` lossless binary form of `input` and `targetEvents` (+ base64). `storage.ts` the `RunStore` port (`save`, `list(filter)`
   summaries, `get`) and `createMemoryStore()` for tests. `exchange.ts` `exportData`/`importData`: one versioned JSON file, validated
   before any write, merged by Run id. The store also keeps the Reset Finder markers (`finderResets()`, `resetFinder(id, at)`, see below); the export file carries
-  them as the optional `finderResets` key. The IndexedDB adapter is shell code in `src/storage/`. `testing/records.ts` `testRecord()` is a
+  them as the optional `finderResets` key, and the player's setup (Settings, Preferences, Player Context: an opaque record `PlayerData` the shell builds and validates, `importData(store, text, validatePlayer)` returns it in `ImportResult.player`) as the optional `player` key; the AI Coach's settings are never in it. The IndexedDB adapter is shell code in `src/storage/`. `testing/records.ts` `testRecord()` is a
   fully played record.
 - `game-profiles.ts` the 7 Game Profiles (yaw, vertical setting, FOV, default Game Sensitivity, Clicking/Tracking weights, each
   value with its source), the Game Sensitivity <-> cm/360 formulas, the Converter (`convertSensitivity`, `readSensitivity`) and

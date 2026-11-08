@@ -36,6 +36,7 @@ export type {
 } from './coach'
 export { decodeInput, decodeTargetEvents, encodeInput, encodeTargetEvents, fromBase64, toBase64 } from './codec'
 export { EXPORT_FORMAT, EXPORT_VERSION, exportData, ImportError, importData, parseExport } from './exchange'
+export type { ImportResult, PlayerData } from './exchange'
 export { coarseLevels, ENOUGH_HALF_WIDTH, fitFinder, INTERVAL_LEVEL, planSession, recommend } from './finder'
 export type { FinderFit, FitOptions, FitReason, PlannedRun } from './finder'
 // Finder phases, Reset Finder and per-category curves (#11)

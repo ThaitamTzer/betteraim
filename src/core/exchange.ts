@@ -5,16 +5,24 @@ import type { RunMode, RunRecord, ScenarioId } from './types'
 
 // The export is ONE JSON file: { format, version, runs: [{ ...summary, input, targetEvents }] } where `input` and
 // `targetEvents` are the binary codec output as base64 text. A change that old readers cannot understand bumps
-// EXPORT_VERSION; importers reject any version they do not know. Later data (options, Finder state) adds keys beside `runs`.
-// `finderResets` ({ [Game Profile id]: time }, Reset Finder #11) is such a key: optional, absent from files of players who never reset and
-// from files written before it existed, which therefore import with no resets. A change that only adds an optional key does not bump the version.
+// EXPORT_VERSION; importers reject any version they do not know. Later data adds keys beside `runs`.
+// `finderResets` ({ [Game Profile id]: time }, Reset Finder #11) and `player` (the player's setup, see `PlayerData`) are such keys: optional,
+// absent from files of players who never reset / from files written before they existed, which therefore import with none.
+// A change that only adds an optional key does not bump the version.
 export const EXPORT_FORMAT = 'betteraim-export'
 export const EXPORT_VERSION = 1
 
 /** The file cannot be imported. The message is meant for the player. */
 export class ImportError extends Error {}
 
-export async function exportData(store: RunStore): Promise<string> {
+/**
+ * The player's setup as the shell keeps it (Game Profile, Game Sensitivity and DPI, Preferences, Player Context): a JSON record the core only
+ * carries, so that the Runs, the Reset markers and the setup move between browsers in one file. The shell makes it and validates it on the way
+ * in (`importData`'s `validatePlayer`). NEVER the AI Coach's settings: they hold API keys and stay in their browser.
+ */
+export type PlayerData = Record<string, unknown>
+
+export async function exportData(store: RunStore, player?: PlayerData): Promise<string> {
   const runs = []
   for (const { id } of await store.list()) {
     const record = await store.get(id)
@@ -23,22 +31,43 @@ export async function exportData(store: RunStore): Promise<string> {
     runs.push({ ...summary, input: toBase64(body.input), targetEvents: toBase64(body.targetEvents) })
   }
   const finderResets = await store.finderResets()
-  return JSON.stringify({ format: EXPORT_FORMAT, version: EXPORT_VERSION, runs, ...(Object.keys(finderResets).length > 0 && { finderResets }) })
+  return JSON.stringify({ format: EXPORT_FORMAT, version: EXPORT_VERSION, runs, ...(Object.keys(finderResets).length > 0 && { finderResets }), ...(player && { player }) })
+}
+
+export interface ImportResult<T extends PlayerData = PlayerData> {
+  /** The number of Runs in the file. */
+  runs: number
+  /** The player's setup as `validatePlayer` returned it, for the shell to apply; undefined when the file has none. The core never applies it. */
+  player: T | undefined
 }
 
 /**
  * Adds the Runs in an export file to the store (a Run with a known id is replaced, nothing is deleted, so importing
- * the same file twice changes nothing; a Reset Finder marker keeps the later of the two times). The whole file is validated first and the
- * Runs are written in one `save`: a bad file never touches existing data. Returns the number of Runs in the file.
+ * the same file twice changes nothing; a Reset Finder marker keeps the later of the two times). The whole file is validated first, the player's
+ * setup included (`validatePlayer` throws `ImportError` for a setup it does not accept, or returns the record to keep), and the Runs
+ * are written in one `save`: a bad file never touches existing data. The port has no write that spans Runs and markers, so Runs go first:
+ * if the markers then fail, importing the file again completes it, whereas markers first could leave a Reset applied with no Runs behind it
+ * (a Reset is permanent). The shell applies the returned setup last, once everything is stored.
  */
-export async function importData(store: RunStore, text: string): Promise<number> {
-  const { runs, finderResets } = parseExport(text)
+export async function importData(store: RunStore, text: string): Promise<ImportResult>
+export async function importData<T extends PlayerData>(store: RunStore, text: string, validatePlayer: (player: PlayerData) => T): Promise<ImportResult<T>>
+export async function importData(store: RunStore, text: string, validatePlayer: (player: PlayerData) => PlayerData = (player) => player): Promise<ImportResult> {
+  const { runs, finderResets, player } = parseExport(text)
+  const accepted = player && accept(validatePlayer, player)
   await store.save(runs)
   for (const [gameProfileId, at] of Object.entries(finderResets)) await store.resetFinder(gameProfileId, at)
-  return runs.length
+  return { runs: runs.length, player: accepted }
 }
 
-export function parseExport(text: string): { runs: RunRecord[]; finderResets: FinderResets } {
+function accept(validate: (player: PlayerData) => PlayerData, player: PlayerData): PlayerData {
+  try {
+    return validate(player)
+  } catch (error) {
+    throw error instanceof ImportError ? error : new ImportError(error instanceof Error ? error.message : 'The setup in the file is not valid.')
+  }
+}
+
+export function parseExport(text: string): { runs: RunRecord[]; finderResets: FinderResets; player: PlayerData | undefined } {
   let file: unknown
   try {
     file = JSON.parse(text)
@@ -57,7 +86,7 @@ export function parseExport(text: string): { runs: RunRecord[]; finderResets: Fi
       throw new ImportError(`Run ${i + 1}: ${error instanceof Error ? error.message : 'invalid'}`)
     }
   })
-  return { runs, finderResets: parseResets(file.finderResets) }
+  return { runs, finderResets: parseResets(file.finderResets), player: file.player === undefined ? undefined : isObj(file.player) ? file.player : fail('"player" must be an object.') }
 }
 
 function parseResets(raw: unknown): FinderResets {
