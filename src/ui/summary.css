@@ -1,0 +1,26 @@
+/* Session summary and History: wider than the setup screens, they hold tables and charts. */
+.page.wide {
+  max-width: 52rem;
+}
+
+.wide h2 {
+  margin: 2rem 0 0.5rem;
+  font-size: 1.15rem;
+}
+
+.wide .table-wrap {
+  margin-top: 0.5rem;
+}
+
+.tag {
+  color: var(--warn);
+  font-size: 0.85rem;
+}
+
+.chart-block .chart {
+  min-height: 220px;
+}
+
+.chart .u-legend {
+  text-align: left;
+}

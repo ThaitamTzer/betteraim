@@ -8,6 +8,8 @@ import { Practice } from './screens/Practice'
 import { Result } from './screens/Result'
 import { RunScreen } from './screens/RunScreen'
 import { Runs } from './screens/Runs'
+import { History } from './screens/History'
+import { SessionSummary } from './screens/SessionSummary'
 import { StorageWarning } from './StorageWarning'
 import type { Go, Route, ScreenProps, Screens } from './routes'
 import './app.css'
@@ -21,6 +23,8 @@ const screens: Screens = {
   run: RunScreen,
   result: Result,
   runs: Runs,
+  history: History,
+  session: SessionSummary,
 }
 
 export function App() {
@@ -39,6 +43,9 @@ export function App() {
           <nav className="topnav">
             <button type="button" className="link" onClick={() => go({ name: 'runs' })}>
               Past Runs
+            </button>
+            <button type="button" className="link" onClick={() => go({ name: 'history' })}>
+              History
             </button>
             <button type="button" className="link" onClick={() => go({ name: 'options' })}>
               Options
