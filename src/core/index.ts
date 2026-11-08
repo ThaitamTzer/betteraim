@@ -2,6 +2,8 @@
 export { aimDelta, angleBetween, degreesPerCount, directionOf, offsetAim, verticalFovDeg, wrapDeg } from './aim'
 export { decodeInput, decodeTargetEvents, encodeInput, encodeTargetEvents, fromBase64, toBase64 } from './codec'
 export { EXPORT_FORMAT, EXPORT_VERSION, exportData, ImportError, importData, parseExport } from './exchange'
+export { cm360For, convertSensitivity, eDpi, gameProfiles, gameSensitivityFor, getGameProfile, isGameProfileId, profileFov, readSensitivity } from './game-profiles'
+export type { GameFov, GameProfile, GameProfileId, SensitivityReading } from './game-profiles'
 export { createRng } from './rng'
 export type { Rng } from './rng'
 export { createRun, replay, RUN_DURATION_MS, STEP_MS } from './run'

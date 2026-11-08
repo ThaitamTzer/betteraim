@@ -87,6 +87,8 @@ describe('replaying a Run', () => {
 const sweep: ScenarioDefinition = {
   id: 'strafe',
   category: 'tracking',
+  name: 'Sweep',
+  description: 'Test-only tracking Scenario.',
   rules() {
     let onTargetMs = 0
     let target: Target = { id: 0, yaw: -30, pitch: 0, radius: 2.55 }

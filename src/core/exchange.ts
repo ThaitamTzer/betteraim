@@ -100,7 +100,7 @@ function parseRun(raw: unknown): RunRecord {
     gameProfileId: field(raw, 'gameProfileId', isText, 'text'),
     mode: field(raw, 'mode', oneOf<RunMode>('finder', 'practice'), 'finder or practice'),
     warmup: field(raw, 'warmup', isBool, 'true or false'),
-    sessionId: field(raw, 'sessionId', isText, 'text'),
+    ...(raw.sessionId === undefined ? {} : { sessionId: field(raw, 'sessionId', isText, 'text') }), // absent in Practice
     env: {
       devicePixelRatio: field(env, 'devicePixelRatio', isPositive, 'a positive number'),
       userAgent: field(env, 'userAgent', isText, 'text'),

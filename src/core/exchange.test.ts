@@ -11,6 +11,7 @@ const records = (): RunRecord[] => [
     { seed: 3, fov: { degrees: 90, axis: 'vertical' } },
     { id: 'c', startedAt: 3_000, mode: 'finder', env: { devicePixelRatio: 1.25, userAgent: 'Firefox/152', rawInput: false } },
   ),
+  testRecord({ seed: 4 }, { id: 'd', startedAt: 4_000, sessionId: undefined }), // Practice: no Session
 ]
 
 const everything = async (store: RunStore) =>
@@ -22,13 +23,13 @@ const storeWith = async (runs: RunRecord[]) => {
   return store
 }
 
-describe('export and import', () => {
+describe('exporting and importing', () => {
   it('a round trip into an empty store yields identical data', async () => {
     const original = records()
     const file = await exportData(await storeWith(original))
 
     const copy = createMemoryStore()
-    expect(await importData(copy, file)).toBe(3)
+    expect(await importData(copy, file)).toBe(4)
 
     expect(await everything(copy)).toEqual(original)
     expect(await copy.list()).toEqual(await (await storeWith(original)).list())
@@ -38,7 +39,8 @@ describe('export and import', () => {
   it('writes one JSON file that names its format and version', async () => {
     const file = JSON.parse(await exportData(await storeWith(records())))
     expect(file).toMatchObject({ format: 'betteraim-export', version: 1 })
-    expect(file.runs).toHaveLength(3)
+    expect(file.runs).toHaveLength(4)
+    expect(file.runs[3]).not.toHaveProperty('sessionId')
   })
 
   it('merges into existing Runs: others are kept, the same id is replaced, importing twice changes nothing', async () => {
@@ -49,7 +51,7 @@ describe('export and import', () => {
     ])
     await importData(target, file)
     await importData(target, file)
-    expect((await target.list()).map((r) => r.id)).toEqual(['other', 'a', 'b', 'c'])
+    expect((await target.list()).map((r) => r.id)).toEqual(['other', 'a', 'b', 'c', 'd'])
     expect(await target.get('a')).toEqual(records()[0])
   })
 

@@ -81,7 +81,8 @@ export interface RunMeta {
   gameProfileId: string
   mode: RunMode
   warmup: boolean
-  sessionId: string
+  /** Absent for Practice Runs, which are not part of a Session. */
+  sessionId?: string
   env: RunEnv
 }
 
