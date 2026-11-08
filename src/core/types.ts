@@ -83,7 +83,8 @@ export interface RunMeta {
   warmup: boolean
   /** Absent for Practice Runs, which are not part of a Session. */
   sessionId?: string
-  env: RunEnv
+  /** The shell sets it on every Run; absent only in Runs imported from before it was captured. */
+  env?: RunEnv
 }
 
 export interface RunResult {

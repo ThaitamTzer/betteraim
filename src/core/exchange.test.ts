@@ -11,7 +11,7 @@ const records = (): RunRecord[] => [
     { seed: 3, fov: { degrees: 90, axis: 'vertical' } },
     { id: 'c', startedAt: 3_000, mode: 'finder', env: { devicePixelRatio: 1.25, userAgent: 'Firefox/152', rawInput: false } },
   ),
-  testRecord({ seed: 4 }, { id: 'd', startedAt: 4_000, sessionId: undefined }), // Practice: no Session
+  testRecord({ seed: 4 }, { id: 'd', startedAt: 4_000, sessionId: undefined, env: undefined }), // Practice, from before env was captured
 ]
 
 const everything = async (store: RunStore) =>
@@ -41,6 +41,7 @@ describe('exporting and importing', () => {
     expect(file).toMatchObject({ format: 'betteraim-export', version: 1 })
     expect(file.runs).toHaveLength(4)
     expect(file.runs[3]).not.toHaveProperty('sessionId')
+    expect(file.runs[3]).not.toHaveProperty('env')
   })
 
   it('merges into existing Runs: others are kept, the same id is replaced, importing twice changes nothing', async () => {
@@ -69,10 +70,9 @@ describe('exporting and importing', () => {
       'an unknown Scenario': (f) => stringify({ ...f, runs: [{ ...f.runs[0], scenario: 'nope' }, ...f.runs.slice(1)] }),
       'an unknown mode': (f) => stringify({ ...f, runs: [{ ...f.runs[0], mode: 'ranked' }, ...f.runs.slice(1)] }),
       'a non-numeric Score': (f) => stringify({ ...f, runs: [{ ...f.runs[0], score: '9' }, ...f.runs.slice(1)] }),
-      'a missing capture environment': (f) => {
-        const { env, ...run } = f.runs[0]
-        return stringify({ ...f, runs: [(void env, run), ...f.runs.slice(1)] })
-      },
+      'a capture environment that is not an object': (f) => stringify({ ...f, runs: [{ ...f.runs[0], env: 'Chrome' }, ...f.runs.slice(1)] }),
+      'a malformed capture environment': (f) =>
+        stringify({ ...f, runs: [{ ...f.runs[0], env: { ...f.runs[0].env, devicePixelRatio: 'wide' } }, ...f.runs.slice(1)] }),
       'a missing id': (f) => stringify({ ...f, runs: [{ ...f.runs[0], id: '' }, ...f.runs.slice(1)] }),
       'input that is not base64': (f) => stringify({ ...f, runs: [{ ...f.runs[0], input: '***' }, ...f.runs.slice(1)] }),
       'truncated input': (f) => stringify({ ...f, runs: [{ ...f.runs[0], input: f.runs[0].input.slice(0, 36) }, ...f.runs.slice(1)] }),

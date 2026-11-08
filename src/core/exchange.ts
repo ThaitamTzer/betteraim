@@ -84,7 +84,7 @@ function field<T>(o: Obj, key: string, valid: (v: unknown) => v is T, what: stri
 function parseRun(raw: unknown): RunRecord {
   if (!isObj(raw)) fail('it is not an object.')
   const fov = field(raw, 'fov', isObj, 'an object')
-  const env = field(raw, 'env', isObj, 'an object')
+  const env = raw.env === undefined ? undefined : field(raw, 'env', isObj, 'an object')
   // fields are copied one by one, so nothing unexpected from the file ever reaches the store
   const summary: RunSummary = {
     scenario: field(raw, 'scenario', isScenario, 'a known Scenario'),
@@ -101,11 +101,13 @@ function parseRun(raw: unknown): RunRecord {
     mode: field(raw, 'mode', oneOf<RunMode>('finder', 'practice'), 'finder or practice'),
     warmup: field(raw, 'warmup', isBool, 'true or false'),
     ...(raw.sessionId === undefined ? {} : { sessionId: field(raw, 'sessionId', isText, 'text') }), // absent in Practice
-    env: {
-      devicePixelRatio: field(env, 'devicePixelRatio', isPositive, 'a positive number'),
-      userAgent: field(env, 'userAgent', isText, 'text'),
-      rawInput: field(env, 'rawInput', isBool, 'true or false'),
-    },
+    ...(env && {
+      env: {
+        devicePixelRatio: field(env, 'devicePixelRatio', isPositive, 'a positive number'),
+        userAgent: field(env, 'userAgent', isText, 'text'),
+        rawInput: field(env, 'rawInput', isBool, 'true or false'),
+      },
+    }),
     score: field(raw, 'score', isNum, 'a number'),
   }
   try {
