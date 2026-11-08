@@ -152,8 +152,11 @@ describe('category weighting', () => {
   const target = (clicking: number) => Math.exp(clicking * Math.log(clickingBest) + (1 - clicking) * Math.log(trackingBest))
 
   it('weights data drawn exactly at the target shares by those shares, as an unweighted fit would', () => {
-    const fit = fitFinder(syntheticRuns(player, mix(7, 3), 1), { weights: WEIGHTS })
+    const runs = syntheticRuns(player, mix(7, 3), 1)
+    const fit = fitFinder(runs, { weights: WEIGHTS })
     expect(fit.peak).toBeCloseTo(target(0.7), 0) // 36.47, to 0.5; counting the shares twice (84/16) would give 34.2
+    // 49 of 70 Runs are Clicking, so the brute-force fit gives every Run weight 0.7 / 0.7 = 0.3 / 0.3 = 1: it is the unweighted fit
+    expect(fit.peak).toBeCloseTo(referencePeak(runs, WEIGHTS), 6)
   })
 
   it('corrects skewed shares back to the target shares', () => {
