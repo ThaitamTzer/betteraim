@@ -17,7 +17,7 @@ export const RAW_INPUT_CAVEAT =
   'Chrome, Edge and Opera are the verified path. In Firefox and Safari the mouse counts are less well verified (the browser may scale them), so the cm/360 and Game Sensitivity shown there may be scaled.'
 
 /** Chrome, Edge and Opera say `Chrome/` (Edge `Edg/`, Opera `OPR/`) in their user agent; Firefox and Safari do not. Only picks which copy to show. */
-export const isChromium = (userAgent: string): boolean => /\b(?:Chrome|Chromium|Edg|OPR)\//.test(userAgent)
+export const isChromium = (userAgent: string): boolean => /(?:Chrome|Chromium|Edg|OPR)\//.test(userAgent) // also matches HeadlessChrome/
 
 /** Chromium and Firefox 148+ expose `pointerrawupdate`; Safari does not but may still give raw movement. Only an early hint. */
 export const rawInputLikelySupported = (): boolean => 'onpointerrawupdate' in window
