@@ -30,6 +30,9 @@ export async function lockPointer(element: Element): Promise<boolean> {
   }
 }
 
+/** The core fires on button 0 whatever the player bound: swapping the two keeps the Run record canonical. */
+export const canonicalButton = (button: number, fire: number): number => (button === fire ? 0 : button === 0 ? fire : button)
+
 export interface QueuedInput {
   /** DOM timestamp (ms, same clock as performance.now()). */
   at: number
@@ -40,9 +43,9 @@ export interface QueuedInput {
  * Collects mouse movement and buttons while the pointer is locked. Call `drain()` once per frame and feed
  * the result to the core; it comes back sorted by time. Movement uses `pointerrawupdate` where available (so
  * every count is seen, not one sum per frame), otherwise `pointermove`; coalesced events are used when
- * present and the parent event otherwise, never both.
+ * present and the parent event otherwise, never both. `fireButton` is the physical button the player bound to fire.
  */
-export function captureInput() {
+export function captureInput(fireButton = 0) {
   let queue: QueuedInput[] = []
   const locked = () => document.pointerLockElement !== null
 
@@ -59,7 +62,7 @@ export function captureInput() {
   const onButton = (e: MouseEvent) => {
     if (!locked()) return
     e.preventDefault()
-    queue.push({ at: e.timeStamp, event: { kind: e.type === 'mousedown' ? 'down' : 'up', button: e.button } })
+    queue.push({ at: e.timeStamp, event: { kind: e.type === 'mousedown' ? 'down' : 'up', button: canonicalButton(e.button, fireButton) } })
   }
   const noMenu = (e: Event) => e.preventDefault()
 

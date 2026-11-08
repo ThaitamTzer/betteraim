@@ -322,14 +322,8 @@ button:disabled {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 14px;
-  height: 14px;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  background:
-    linear-gradient(var(--text), var(--text)) center / 2px 100% no-repeat,
-    linear-gradient(var(--text), var(--text)) center / 100% 2px no-repeat;
-  mix-blend-mode: difference;
 }
 
 .hud {

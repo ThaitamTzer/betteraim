@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { cm360For, degreesPerCount, eDpi, getGameProfile, profileFov } from '../../core'
+import { cm360For, degreesPerCount, eDpi, getGameProfile, practiceFov } from '../../core'
 import { rawInputLikelySupported } from '../../input/pointer'
 import { fmt } from '../format'
 import type { ScreenProps } from '../routes'
+import { loadPreferences } from '../preferences'
 import { loadSettings } from '../settings'
 
 export function Home({ go }: ScreenProps<'home'>) {
@@ -54,12 +55,18 @@ export function Home({ go }: ScreenProps<'home'>) {
         <button
           type="button"
           className="primary"
-          onClick={() => go({ name: 'practice', sensitivity, dpi, fov: profileFov(gameProfileId), gameProfileId })}
+          // Practice is the only place the FOV override applies; Finder Runs must use `profileFov(id)`.
+          onClick={() =>
+            go({ name: 'practice', sensitivity, dpi, fov: practiceFov(gameProfileId, loadPreferences().practiceFov), gameProfileId })
+          }
         >
           Practice
         </button>
         <button type="button" onClick={() => go({ name: 'converter' })}>
           Converter
+        </button>
+        <button type="button" onClick={() => go({ name: 'options' })}>
+          Options
         </button>
         <button type="button" onClick={() => go({ name: 'onboarding' })}>
           Change setup
