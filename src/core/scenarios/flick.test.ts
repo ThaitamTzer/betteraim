@@ -112,6 +112,12 @@ describe('Flick determinism', () => {
     expect(db.slice(0, n)).toEqual(da.slice(0, n).map((d) => expect.closeTo(d, 6)))
   })
 
+  it('gives exactly the same targets when the same seed is played the same way twice', () => {
+    const play = () => runBot(testParams({ seed: 42 }), aimBot({ gain: 1.1 })).targetEvents
+    expect(spawns(play()).length).toBeGreaterThan(10)
+    expect(play()).toEqual(play())
+  })
+
   it('gives a different target sequence for a different seed', () => {
     const first = (seed: number) => createRun(testParams({ seed })).state().targets[0]
     expect(first(1)).not.toEqual(first(2))

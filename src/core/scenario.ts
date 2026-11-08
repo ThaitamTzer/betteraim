@@ -1,5 +1,11 @@
 import type { Aim, ScenarioCategory, ScenarioId, Target, TargetEvent } from './types'
 
+// They live here, not in run.ts: Scenario files may import them, and run.ts imports the Scenario registry,
+// so importing run.ts from a Scenario file would be a cycle.
+export const RUN_DURATION_MS = 30_000
+/** Simulated time advances in whole steps of this size, so results do not depend on the tick rate. */
+export const STEP_MS = 1
+
 /**
  * What one Scenario implements. The Run engine (run.ts) owns time, the crosshair, input and the record;
  * Rules own the targets, the target event log and the Score. Create one Rules per Run.

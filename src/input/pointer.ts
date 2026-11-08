@@ -7,13 +7,22 @@ export const rawInputLikelySupported = (): boolean => 'onpointerrawupdate' in wi
  * Captures the pointer asking for unadjusted movement. Resolves to whether movement is raw: false when the
  * browser ignores or rejects the option, in which case the lock still works but the OS may accelerate it.
  * Rejects when the lock itself is refused (for example right after Escape, which Chrome blocks briefly).
+ * This is the real capability check; `rawInputLikelySupported` is only an early hint for the UI.
  */
 export async function lockPointer(element: Element): Promise<boolean> {
-  const attempt: unknown = element.requestPointerLock({ unadjustedMovement: true })
+  // Browsers read only the dictionary members they know, so the getter runs only where the option is supported.
+  let optionRead = false
+  const options = {
+    get unadjustedMovement() {
+      optionRead = true
+      return true
+    },
+  }
+  const attempt: unknown = element.requestPointerLock(options)
   if (!(attempt instanceof Promise)) return false // older browsers return nothing and ignore the option
   try {
     await attempt
-    return true
+    return optionRead
   } catch (error) {
     if (!(error instanceof DOMException) || error.name !== 'NotSupportedError') throw error
     await element.requestPointerLock()

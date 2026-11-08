@@ -1,11 +1,10 @@
 import { degreesPerCount, wrapDeg } from './aim'
+import { RUN_DURATION_MS, STEP_MS } from './scenario'
 import type { ScenarioDefinition } from './scenario'
 import { getScenario } from './scenarios'
 import type { Aim, InputEvent, RecordedInput, RunParams, RunResult, RunState } from './types'
 
-export const RUN_DURATION_MS = 30_000
-/** Simulated time advances in whole steps of this size, so results do not depend on the tick rate. */
-export const STEP_MS = 1
+export { RUN_DURATION_MS, STEP_MS }
 
 const MAX_PITCH = 89
 const FIRE_BUTTON = 0

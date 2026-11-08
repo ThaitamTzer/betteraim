@@ -26,6 +26,8 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 ## Adding a Scenario
 Implement `ScenarioDefinition` (`rules(seed)` returns `Rules`: `targets`, `events`, `score`, plus `shoot` for Clicking and
 `step(t, aim, held)` for Tracking) and add it to `scenarios/index.ts`. Micro is `createClickingScenario({ id: 'micro', ... })`.
+Scenario files must never import `run.ts` (it imports the registry, so that is a cycle); `RUN_DURATION_MS` and `STEP_MS` live in
+`scenario.ts`.
 
 ## Writing a bot test
 A `Bot` gets the `RunState` each tick and returns `{ turn?: {yaw, pitch} degrees, fire?: held }`. `runBot(params, bot)` plays a
