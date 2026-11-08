@@ -1,0 +1,66 @@
+// Public surface of the headless core. The render and UI layers import from here only.
+export { aimDelta, angleBetween, degreesPerCount, directionOf, offsetAim, verticalFovDeg, wrapDeg } from './aim'
+export { aggregateRuns, byDay, groupRuns, loadAnalysed, loadAnalysedRuns } from './aggregate'
+export type { AnalysedRun, Aggregate, ClickingMetrics, Metrics, RunGroup, ScenarioAggregate, TrackingMetrics } from './aggregate'
+export { analyseRun, leadOf } from './analysis'
+export type { AimMovement, ClickingAnalysis, Lead, Outcome, RunAnalysis, RunData, TrackingAnalysis } from './analysis'
+export {
+  askJson,
+  buildAdvicePayload,
+  buildSensitivityPayload,
+  cachedRecommendation,
+  CoachError,
+  createChoiceCache,
+  describePlayerContext,
+  parsePlayerContext,
+  PLAYER_CONTEXT,
+  PLAYER_CONTEXT_FIELDS,
+  practiceAdvice,
+  recommendSensitivity,
+  schemaError,
+  snapshotKey,
+} from './coach'
+export type {
+  AdvicePayload,
+  ChoiceCache,
+  CoachChoice,
+  CoachErrorKind,
+  CoachProvider,
+  CoachRequest,
+  JsonSchema,
+  PlayerContext,
+  Recommendation,
+  RecommendInput,
+  SensitivityPayload,
+  SnapshotInput,
+} from './coach'
+export { decodeInput, decodeTargetEvents, encodeInput, encodeTargetEvents, fromBase64, toBase64 } from './codec'
+export { EXPORT_FORMAT, EXPORT_VERSION, exportData, ImportError, importData, parseExport } from './exchange'
+export type { ImportResult, PlayerData } from './exchange'
+export {
+  coarseLevels,
+  ENOUGH_HALF_WIDTH,
+  finderRunsFor,
+  fitCategories,
+  fitFinder,
+  FINE_HALF_WIDTH,
+  FINE_SPREAD,
+  INTERVAL_LEVEL,
+  nextSession,
+  planSession,
+  pointsTo,
+  recommend,
+} from './finder'
+export type { FinderFit, FitOptions, FitReason, NextReason, NextSession, PlannedRun } from './finder'
+export { cm360For, convertSensitivity, eDpi, gameProfiles, gameSensitivityFor, getGameProfile, isGameProfileId, practiceFov, profileFov, readSensitivity } from './game-profiles'
+export type { GameFov, GameProfile, GameProfileId, SensitivityReading } from './game-profiles'
+export { createRng } from './rng'
+export type { Rng } from './rng'
+export { createRun, replay, replaySteps, RUN_DURATION_MS, STEP_MS } from './run'
+export type { Run } from './run'
+export type { Rules, ScenarioDefinition } from './scenario'
+export { getScenario, scenarios } from './scenarios'
+export { createMemoryStore, packRun, selectRuns, unpackRun } from './storage'
+export type { FinderResets, RunBody, RunFilter, RunStore, RunSummary } from './storage'
+export { tallyShots } from './tally'
+export type * from './types'
