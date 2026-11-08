@@ -91,6 +91,10 @@ export function Chart({ x, series, markers = [], bands = [], formatX = String, x
           drawClear: [
             (u) => {
               u.ctx.save()
+              // A band can reach past the plotted x range (an interval is not cut at the tested range): keep it off the axes.
+              u.ctx.beginPath()
+              u.ctx.rect(u.bbox.left, u.bbox.top, u.bbox.width, u.bbox.height)
+              u.ctx.clip()
               u.ctx.fillStyle = `${accent}33`
               for (const b of bands) {
                 const left = u.valToPos(b.from, 'x', true)
