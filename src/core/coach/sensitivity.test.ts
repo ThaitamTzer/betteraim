@@ -179,6 +179,28 @@ describe('with nothing to choose between', () => {
   })
 })
 
+describe('a Reset of the Finder', () => {
+  it('keeps the Runs from before it out of what the AI Coach is sent, and out of the snapshot', async () => {
+    const runs = runsOf(5)
+    const resetAt = Math.min(...runs.filter((r) => r.sessionId === 'syn-1-2').map((r) => r.startedAt)) // Sessions 0 and 1 are before it
+    const reset = { ...setup(runs), fit: fitFinder(runs, { weights: WEIGHTS, exclude: (r) => r.startedAt < resetAt }) }
+    const plain = setup(runs)
+    expect(reset.fit.interval).not.toBeNull()
+    expect(reset.fit.counts.runs).toBeLessThan(plain.fit.counts.runs)
+
+    const asked = async (input: typeof reset) => {
+      const { provider, requests } = fakeProvider(coachAnswer(inside(input.fit)))
+      const result = await recommendSensitivity({ provider, ...input })
+      return { result, sent: figures(requests[0]!) }
+    }
+    const [before, after] = [await asked(plain), await asked(reset)] // `items` holds every Run in both: the fit alone decides which are read
+    expect(after.sent.fitted).toEqual({ runs: reset.fit.counts.runs, sessions: 3 })
+    expect(after.sent.levels.reduce((sum: number, l: { runs: number }) => sum + l.runs, 0)).toBe(reset.fit.counts.runs)
+    expect(before.sent.fitted.runs).toBe(plain.fit.counts.runs)
+    expect(after.result.snapshotKey).not.toBe(before.result.snapshotKey)
+  })
+})
+
 describe('the cache', () => {
   it('answers the same data again with the same number and no call', async () => {
     const input = setup(runsOf(5))
