@@ -34,5 +34,8 @@ export interface Rules {
 export interface ScenarioDefinition {
   id: ScenarioId
   category: ScenarioCategory
+  /** Label and one-line description for the Practice picker. */
+  name: string
+  description: string
   rules(seed: number): Rules
 }
