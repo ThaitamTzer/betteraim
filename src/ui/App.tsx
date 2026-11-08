@@ -1,15 +1,24 @@
 import { useState } from 'react'
 import type { ReactElement } from 'react'
 import { Home } from './screens/Home'
+import { Converter } from './screens/Converter'
+import { Onboarding } from './screens/Onboarding'
+import { Practice } from './screens/Practice'
 import { Result } from './screens/Result'
 import { RunScreen } from './screens/RunScreen'
+import { Runs } from './screens/Runs'
+import { StorageWarning } from './StorageWarning'
 import type { Go, Route, ScreenProps, Screens } from './routes'
 import './app.css'
 
 const screens: Screens = {
   home: Home,
+  onboarding: Onboarding,
+  converter: Converter,
+  practice: Practice,
   run: RunScreen,
   result: Result,
+  runs: Runs,
 }
 
 export function App() {
@@ -25,8 +34,12 @@ export function App() {
           <button type="button" className="brand" onClick={() => go({ name: 'home' })}>
             BetterAim
           </button>
+          <button type="button" className="link" onClick={() => go({ name: 'runs' })}>
+            Past Runs
+          </button>
         </header>
       )}
+      {route.name !== 'run' && <StorageWarning key={`storage-${key}`} />}
       <Screen key={key} route={route} go={go} />
     </>
   )

@@ -66,7 +66,29 @@ button:disabled {
 }
 
 .topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 1rem 1.25rem;
+}
+
+.link {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.link:hover {
+  color: var(--text);
+}
+
+.storage-warning {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 0 1.25rem;
 }
 
 .brand {
@@ -132,7 +154,8 @@ button:disabled {
   border-color: var(--accent);
 }
 
-.field input {
+.field input,
+.field select {
   flex: 1;
   min-width: 0;
   padding: 0.6rem 0.75rem;
@@ -141,7 +164,12 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-.field input:focus-visible {
+.field select option {
+  background: var(--panel);
+}
+
+.field input:focus-visible,
+.field select:focus-visible {
   outline: none;
 }
 
@@ -189,10 +217,91 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+.scenarios {
+  display: grid;
+  gap: 0.75rem;
+  margin: 2rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scenarios button {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+
+.scenarios span {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.page > .actions {
+  margin-top: 2rem;
+}
+
+/* Converter result */
+.table-wrap {
+  margin: 2rem 0 1rem;
+  overflow-x: auto;
+}
+
+.results {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.results th,
+.results td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+
+.results th:first-child,
+.results td:first-child {
+  text-align: left;
+}
+
+.results th {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.results .answer {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Past Runs (the table sits in the Converter's .table-wrap) */
+.runs {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.runs th,
+.runs td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.runs th {
+  color: var(--muted);
+  font-weight: 600;
 }
 
 /* Run screen */

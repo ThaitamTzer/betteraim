@@ -61,6 +61,18 @@ export interface RunParams {
   fov: Fov
 }
 
+/**
+ * How the browser captured this Run, recorded so old Runs can be re-analysed later. `movementX/Y` units differ per
+ * browser (Chrome: physical pixels, Firefox: CSS pixels scaled by display scale and page zoom), so the same mouse can
+ * deliver counts scaled by `devicePixelRatio` and zoom. The core only stores it; it is supplied by the shell.
+ */
+export interface RunEnv {
+  devicePixelRatio: number
+  userAgent: string
+  /** Whether the pointer lock gave unadjusted movement (no OS acceleration), as detected when the Run started. */
+  rawInput: boolean
+}
+
 /** Facts the app shell supplies; the core never reads a clock or generates ids. */
 export interface RunMeta {
   id: string
@@ -69,7 +81,10 @@ export interface RunMeta {
   gameProfileId: string
   mode: RunMode
   warmup: boolean
-  sessionId: string
+  /** Absent for Practice Runs, which are not part of a Session. */
+  sessionId?: string
+  /** The shell sets it on every Run; absent only in Runs imported from before it was captured. */
+  env?: RunEnv
 }
 
 export interface RunResult {
@@ -79,7 +94,7 @@ export interface RunResult {
   score: number
 }
 
-/** The persisted Run (ticket #4 stores it). Build it with `{ ...params, ...meta, ...run.result() }`. */
+/** The persisted Run (see storage.ts). Build it with `{ ...params, ...meta, ...run.result() }`. */
 export type RunRecord = RunParams & RunMeta & RunResult
 
 /** Live state for rendering and for bots. */
