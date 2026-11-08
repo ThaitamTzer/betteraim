@@ -60,12 +60,14 @@ describe('the confidence interval', () => {
   const run = (n: number, seed: number) => fitFinder(syntheticRuns(player, coarse(n), seed), { weights: WEIGHTS })
 
   it('is a central 90% bootstrap interval that holds the peak and covers the true optimum about nine times in ten', () => {
-    const fits = seeds(100).map((seed) => run(8, seed))
-    expect(fits.every((f) => f.interval && f.interval.low <= f.peak! && f.peak! <= f.interval.high)).toBe(true)
-    const covered = fits.filter((f) => f.interval && f.interval.low <= 33 && 33 <= f.interval.high).length / fits.length
-    // nominal 0.90; measured about 0.9 with the small-sample stretch, 0.8 without it. Asserted loosely and not above, the interval is statistical.
-    expect(covered).toBeGreaterThanOrEqual(0.82)
-    expect(covered).toBeLessThanOrEqual(0.99)
+    for (const sessions of [5, 8]) {
+      const fits = seeds(100).map((seed) => run(sessions, seed))
+      expect(fits.every((f) => f.interval && f.interval.low <= f.peak! && f.peak! <= f.interval.high)).toBe(true)
+      const covered = fits.filter((f) => f.interval && f.interval.low <= 33 && 33 <= f.interval.high).length / fits.length
+      // Nominal 0.90, measured 0.88 to 0.89 over these seeds (0.73 at 5 Sessions without the small-sample stretch). Not 1: it is statistical.
+      expect(covered, `${sessions} Sessions`).toBeGreaterThanOrEqual(0.83)
+      expect(covered, `${sessions} Sessions`).toBeLessThanOrEqual(0.97)
+    }
   })
 
   it('states its half-width relative to the peak', () => {
