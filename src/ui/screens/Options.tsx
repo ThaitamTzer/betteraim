@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { cm360For, convertSensitivity, eDpi, getGameProfile } from '../../core'
 import type { GameProfileId } from '../../core'
 import { createHitSound } from '../../audio/hit-sound'
+import { CoachSection } from '../CoachSection'
 import { Crosshair } from '../Crosshair'
 import { CheckField, ColorField, GameSelect, NumberField, RangeField, Select } from '../fields'
 import { fmt } from '../format'
@@ -37,6 +38,7 @@ export function Options({ go }: ScreenProps<'options'>) {
       <ControlsSection prefs={prefs} update={update} />
       <HitSoundSection prefs={prefs} update={update} />
       <FovSection prefs={prefs} update={update} />
+      <CoachSection />
 
       <div className="actions">
         <button type="button" onClick={() => go({ name: 'home' })}>

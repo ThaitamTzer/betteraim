@@ -25,4 +25,8 @@ thin shell: `ui/` (React screens), `render/` (Three.js), `input/` (Pointer Lock)
 Pushes to `main` deploy to GitHub Pages through `.github/workflows/pages.yml`. In the repository settings, Pages must be set to
 source = GitHub Actions.
 
+The production build carries a Content Security Policy as a meta tag (`src/csp.ts`, injected by `vite.config.ts`; the dev server has none). It lets
+scripts come from the app only and lets the AI Coach call https addresses and `http://localhost` / `127.0.0.1`. If you add a library that injects
+`<style>` tags or loads from a CDN, the build will break at runtime in a browser: check the console for CSP violations.
+
 MIT licensed, see [LICENSE](LICENSE).

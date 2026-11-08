@@ -1,5 +1,6 @@
 import { aggregateRuns, getScenario } from '../../core'
 import { formatMeanScore, metrics } from '../metrics'
+import { PracticeAdvice } from '../PracticeAdvice'
 import type { ScreenProps } from '../routes'
 import { formatScore } from '../score'
 import { useAnalysed } from '../useAnalysed'
@@ -11,13 +12,12 @@ import '../summary.css'
  */
 export function SessionSummary({ route, go }: ScreenProps<'session'>) {
   const loaded = useAnalysed(route.sessionId)
-  const back = (
-    <div className="actions">
-      <button type="button" onClick={() => go(route.back)}>
-        Back
-      </button>
-    </div>
+  const backButton = (
+    <button type="button" onClick={() => go(route.back)}>
+      Back
+    </button>
   )
+  const back = <div className="actions">{backButton}</div>
 
   if (!loaded) return <main className="page wide"><p className="lede">Loading your Session...</p></main>
   if ('error' in loaded) {
@@ -123,7 +123,14 @@ export function SessionSummary({ route, go }: ScreenProps<'session'>) {
           </tbody>
         </table>
       </div>
-      {back}
+      {/* Advice is for Practice Sessions; a Finder Session's Analysis goes to the Finder result (ticket #15). */}
+      {scenarios.length > 0 && items.some((i) => i.run.mode === 'practice' && !i.run.warmup) ? (
+        <PracticeAdvice items={items} onSetup={() => go({ name: 'options' })}>
+          {backButton}
+        </PracticeAdvice>
+      ) : (
+        back
+      )}
     </main>
   )
 }
