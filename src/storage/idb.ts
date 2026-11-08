@@ -4,6 +4,8 @@ import type { RunBody, RunStore, RunSummary } from '../core'
 // Two object stores so that listing never loads the ~400 kB binary body of every Run.
 const SUMMARIES = 'runs'
 const BODIES = 'bodies'
+// Reset Finder markers, one { id: Game Profile id, at } per Game Profile. Added in version 2; Runs are untouched by the upgrade.
+const RESETS = 'finderResets'
 
 const request = <T>(req: IDBRequest<T>) =>
   new Promise<T>((resolve, reject) => {
@@ -20,10 +22,12 @@ const finished = (tx: IDBTransaction) =>
 /** The app's RunStore, backed by IndexedDB. Not unit-tested (no IndexedDB in Node); the memory adapter covers the port. */
 export function openRunStore(name = 'betteraim'): Promise<RunStore> {
   return new Promise((resolve, reject) => {
-    const opening = indexedDB.open(name, 1)
+    const opening = indexedDB.open(name, 2)
     opening.onupgradeneeded = () => {
-      opening.result.createObjectStore(SUMMARIES, { keyPath: 'id' })
-      opening.result.createObjectStore(BODIES, { keyPath: 'id' })
+      const names = opening.result.objectStoreNames
+      if (!names.contains(SUMMARIES)) opening.result.createObjectStore(SUMMARIES, { keyPath: 'id' })
+      if (!names.contains(BODIES)) opening.result.createObjectStore(BODIES, { keyPath: 'id' })
+      if (!names.contains(RESETS)) opening.result.createObjectStore(RESETS, { keyPath: 'id' })
     }
     opening.onerror = () => reject(opening.error)
     opening.onsuccess = () => {
@@ -42,6 +46,20 @@ export function openRunStore(name = 'betteraim'): Promise<RunStore> {
         async list(filter) {
           const all = await request<RunSummary[]>(db.transaction(SUMMARIES).objectStore(SUMMARIES).getAll())
           return selectRuns(all, filter)
+        },
+        async finderResets() {
+          const all = await request<{ id: string; at: number }[]>(db.transaction(RESETS).objectStore(RESETS).getAll())
+          return Object.fromEntries(all.map(({ id, at }): [string, number] => [id, at]))
+        },
+        async resetFinder(gameProfileId, at) {
+          const tx = db.transaction(RESETS, 'readwrite')
+          const store = tx.objectStore(RESETS)
+          const stored = store.get(gameProfileId) // read and write in one transaction: the later marker wins even against a concurrent import
+          stored.onsuccess = () => {
+            const current = (stored.result as { at: number } | undefined)?.at
+            if (current === undefined || current < at) store.put({ id: gameProfileId, at })
+          }
+          await finished(tx)
         },
         async get(id) {
           const tx = db.transaction([SUMMARIES, BODIES])

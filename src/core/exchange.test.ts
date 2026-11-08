@@ -24,6 +24,55 @@ const storeWith = async (runs: RunRecord[]) => {
 }
 
 describe('exporting and importing', () => {
+  describe('Reset Finder markers', () => {
+    const resetStore = async () => {
+      const store = await storeWith(records())
+      await store.resetFinder('valorant', 2_500)
+      await store.resetFinder('cs2', 9_000)
+      return store
+    }
+
+    it('travel with the Runs: a round trip yields identical Runs and markers', async () => {
+      const source = await resetStore()
+      const file = await exportData(source)
+      const copy = createMemoryStore()
+      await importData(copy, file)
+
+      expect(await copy.finderResets()).toEqual({ valorant: 2_500, cs2: 9_000 })
+      expect(await everything(copy)).toEqual(await everything(source))
+      expect(await exportData(copy)).toBe(file)
+    })
+
+    it('are left out of a file from a store that never reset, and older files without them import with none', async () => {
+      const file = JSON.parse(await exportData(await storeWith(records())))
+      expect(file).not.toHaveProperty('finderResets')
+      const target = createMemoryStore()
+      await importData(target, JSON.stringify(file))
+      expect(await target.finderResets()).toEqual({})
+    })
+
+    it('merge into the markers already there: the later one holds, nothing is un-reset', async () => {
+      const file = await exportData(await resetStore())
+      const target = await storeWith([])
+      await target.resetFinder('valorant', 4_000) // reset later here than in the file
+      await target.resetFinder('r6', 100)
+      await importData(target, file)
+      await importData(target, file)
+      expect(await target.finderResets()).toEqual({ valorant: 4_000, cs2: 9_000, r6: 100 })
+    })
+
+    it('are validated before anything is written: a bad marker rejects the whole file', async () => {
+      const good = JSON.parse(await exportData(await resetStore()))
+      for (const bad of [[], 'now', { valorant: 'yesterday' }, { valorant: null }, { valorant: [1] }]) {
+        const target = await storeWith([testRecord({ seed: 5 }, { id: 'keep', startedAt: 10 })])
+        await target.resetFinder('cs2', 50)
+        await expect(importData(target, JSON.stringify({ ...good, finderResets: bad }))).rejects.toThrow(ImportError)
+        expect((await target.list()).map((r) => r.id)).toEqual(['keep'])
+        expect(await target.finderResets()).toEqual({ cs2: 50 })
+      }
+    })
+  })
+
   it('a round trip into an empty store yields identical data', async () => {
     const original = records()
     const file = await exportData(await storeWith(original))

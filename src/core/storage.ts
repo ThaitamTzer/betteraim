@@ -30,7 +30,14 @@ export interface RunStore {
   /** Summaries, oldest first (`startedAt`, then `id`). Never loads input or target events. */
   list(filter?: RunFilter): Promise<RunSummary[]>
   get(id: string): Promise<RunRecord | undefined>
+  /** Reset Finder markers (see `FinderResets`). They live beside the Runs, so an export carries them. */
+  finderResets(): Promise<FinderResets>
+  /** Resets the Finder of a Game Profile at `at`. A later marker already stored is kept, so a reset is never undone by an older one (an import). */
+  resetFinder(gameProfileId: string, at: number): Promise<void>
 }
+
+/** Per Game Profile id, the time (`startedAt` scale) before which Finder Runs are left out of the fit (Reset Finder, #11). The Runs themselves stay. */
+export type FinderResets = Record<string, number>
 
 export function packRun(record: RunRecord): { summary: RunSummary; body: RunBody } {
   const { input, targetEvents, ...summary } = record
@@ -58,7 +65,12 @@ export function selectRuns(all: readonly RunSummary[], f: RunFilter = {}): RunSu
 
 export function createMemoryStore(): RunStore {
   const runs = new Map<string, { summary: RunSummary; body: RunBody }>()
+  const resets = new Map<string, number>() // a Map: an id from an imported file may be "constructor" or "__proto__"
   return {
+    finderResets: async () => Object.fromEntries(resets),
+    async resetFinder(gameProfileId, at) {
+      resets.set(gameProfileId, Math.max(at, resets.get(gameProfileId) ?? at))
+    },
     async save(records) {
       const packed = records.map(packRun) // encode everything first: a failure leaves the store untouched
       for (const p of packed) runs.set(p.summary.id, p)
