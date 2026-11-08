@@ -7,6 +7,7 @@ import type { Fov, RunMeta, RunParams, RunRecord } from '../core'
  */
 export type Route =
   | { name: 'home' }
+  | { name: 'runs' }
   | { name: 'onboarding' }
   | { name: 'converter' }
   /** Scenario picker; a chosen Scenario is played as a Practice Run with these settings (from the active Game Profile). */
@@ -14,8 +15,8 @@ export type Route =
   | {
       name: 'run'
       params: RunParams
-      /** Everything about the Run that is not core input; the id and start time are added when it starts. */
-      meta: Omit<RunMeta, 'id' | 'startedAt'>
+      /** Everything about the Run that is not core input; the id, start time and capture env are added when it starts. */
+      meta: Omit<RunMeta, 'id' | 'startedAt' | 'env'>
       /** Where to go when the Run ends; a Finder Session would chain the next Run here. */
       next: (record: RunRecord) => Route
     }

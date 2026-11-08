@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { createRun, RUN_DURATION_MS } from '../../core'
-import type { Run, RunRecord } from '../../core'
+import type { Run, RunEnv, RunRecord } from '../../core'
 import { captureInput, lockPointer, rawInputLikelySupported } from '../../input/pointer'
 import { createScene } from '../../render/scene'
+import { saveRun } from '../../storage/runs'
 import type { ScreenProps } from '../routes'
 
 interface Live {
@@ -11,6 +12,7 @@ interface Live {
   origin: number
   id: string
   startedAt: number
+  env: RunEnv
 }
 
 export function RunScreen({ route, go }: ScreenProps<'run'>) {
@@ -49,7 +51,8 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
       live.current = null
       document.exitPointerLock()
       const { route: r, go: navigate } = latest.current
-      const record: RunRecord = { ...r.params, ...r.meta, id: l.id, startedAt: l.startedAt, ...l.run.result() }
+      const record: RunRecord = { ...r.params, ...r.meta, id: l.id, startedAt: l.startedAt, env: l.env, ...l.run.result() }
+      saveRun(record)
       navigate(r.next(record))
     }
 
@@ -97,8 +100,10 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
     const input = inputRef.current
     if (!canvas || !input || live.current) return
     setProblem(null)
+    let rawInput: boolean
     try {
-      setRaw(await lockPointer(canvas))
+      rawInput = await lockPointer(canvas)
+      setRaw(rawInput)
     } catch {
       setProblem('The mouse could not be captured. Click again to retry.')
       return
@@ -108,7 +113,8 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
       return
     }
     input.drain()
-    live.current = { run: createRun(route.params), origin: performance.now(), id: crypto.randomUUID(), startedAt: Date.now() }
+    const env = { devicePixelRatio: window.devicePixelRatio, userAgent: navigator.userAgent, rawInput }
+    live.current = { run: createRun(route.params), origin: performance.now(), id: crypto.randomUUID(), startedAt: Date.now(), env }
     setAbandoned(false)
     setPlaying(true)
   }
