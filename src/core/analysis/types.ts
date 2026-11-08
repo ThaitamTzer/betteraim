@@ -14,6 +14,8 @@ export interface AimMovement {
   endMs: number
   /** Length of the Ideal Path: crosshair at target appearance to the target centre, in degrees. */
   idealDistance: number
+  /** Angular distance the crosshair travelled during the movement, in degrees (jitter smoothed out). */
+  pathLength: number
   /** Where the Primary Submovement ended, in degrees along the Ideal Path from its start (past `idealDistance` is beyond the centre). */
   primaryEndAlong: number
   outcome: Outcome
@@ -33,6 +35,11 @@ export interface ClickingAnalysis {
   hits: number
   /** hits / shots, 0 when no shot was fired. */
   accuracy: number
+  /**
+   * Mouse speed: how fast the crosshair moves from target appearance to hit, in deg/s (total distance travelled over
+   * total time of the Aim Movements). Angular, not cm/s, so it can be compared between Sensitivities.
+   */
+  mouseSpeed: number
   /** Aim Movements whose Primary Submovement was an Overshoot / an Undershoot (of `movementCount`). */
   overshoots: number
   undershoots: number

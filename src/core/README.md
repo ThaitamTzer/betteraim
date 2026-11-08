@@ -7,8 +7,11 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 - `types.ts` shared types. `aim.ts` degrees per count, sphere geometry (`angleBetween`, `offsetAim`, `aimDelta`), FOV.
 - `run.ts` the engine: `createRun(params)`, `replay`. `scenario.ts` what a Scenario implements (`Rules`).
 - `scenarios/` `clicking.ts` (shared by Flick and Micro), `flick.ts`, `index.ts` (the registry, one line per Scenario).
+- `analysis/` `analyseRun(run)`: Run Analysis, a union on Scenario category. Clicking (#7) is implemented, `tracking` is a stub for
+  #8. It replays `input` to rebuild the crosshair path, so a `RunRecord` is all it needs. `clicking.ts` Aim Movements, Ideal Path and
+  classification; `velocity.ts` smoothing, peaks and the thresholds (read its header before changing one).
 - `rng.ts` `createRng(seed)`. `tally.ts` `tallyShots`. `testing/` bots and test params (tests only).
-- Not here yet: Converter/Game Profiles (#3), storage and binary encoding of `RunRecord.input` (#4), Analysis (#7, #8),
+- Not here yet: Converter/Game Profiles (#3), storage and binary encoding of `RunRecord.input` (#4), Tracking Analysis (#8),
   Finder (#9-#11), AI Coach (#14, #15).
 
 ## Conventions
@@ -43,7 +46,9 @@ const lagging: Bot = (s) => {
   return past && { turn: aimDelta(s.crosshair, past), fire: true }
 }
 ```
-Overshoot, undershoot and reaction time are covered in `testing/bots.test.ts`.
+Overshoot, undershoot and reaction time are covered in `testing/bots.test.ts`. `lineBot({ bursts, burstMs, pauseMs, bow })` follows
+the great circle to the target (`aimBot` interpolates in yaw/pitch, so it drifts off the Ideal Path): one push is smooth, several
+are jerky, `bow` bends it sideways. Analysis tests (`analysis/clicking.test.ts`) run bots at several Sensitivity/DPI settings.
 
 ## Determinism rules
 - Randomness only from `createRng(seed)`, with a number of draws that does not depend on input (Finder Runs share a seed

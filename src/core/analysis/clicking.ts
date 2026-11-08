@@ -77,6 +77,8 @@ export function analyseClicking(run: RunData): ClickingAnalysis {
     })
     const travelled = speed.reduce((a, b) => a + b, 0)
     const pathDeviation = travelled === 0 ? 0 : deviationSum / travelled
+    // Length of the smoothed path (speed is deg/s per ms), so one-count jitter does not add distance.
+    const pathLength = travelled / 1000
     // Where the crosshair is once the Primary Submovement's last ms has passed (still at the start if it never moved).
     const last = samples.findLastIndex((s) => primaryEnd !== null && Math.floor(s.ms) <= primaryEnd)
     const primaryEndAlong = samples[Math.max(0, last)]?.along ?? 0
@@ -85,7 +87,7 @@ export function analyseClicking(run: RunData): ClickingAnalysis {
     if (primaryEndAlong > idealDistance + e.radius) outcome = 'overshoot'
     else if (primaryEndAlong < idealDistance - e.radius) outcome = 'undershoot'
 
-    movements.push({ targetId: e.id, startMs: e.t, endMs, idealDistance, primaryEndAlong, outcome, pathDeviation, velocityPeaks: peaks })
+    movements.push({ targetId: e.id, startMs: e.t, endMs, idealDistance, pathLength, primaryEndAlong, outcome, pathDeviation, velocityPeaks: peaks })
   }
 
   const { hits, shots, accuracy } = tallyShots(run.targetEvents)
@@ -94,6 +96,7 @@ export function analyseClicking(run: RunData): ClickingAnalysis {
   const total = (pick: (m: AimMovement) => number) => movements.reduce((sum, m) => sum + pick(m), 0)
   const overshoots = count('overshoot')
   const undershoots = count('undershoot')
+  const seconds = total((m) => m.endMs - m.startMs) / 1000
   return {
     category: 'clicking',
     movements,
@@ -101,6 +104,7 @@ export function analyseClicking(run: RunData): ClickingAnalysis {
     shots,
     hits,
     accuracy,
+    mouseSpeed: seconds === 0 ? 0 : total((m) => m.pathLength) / seconds,
     overshoots,
     undershoots,
     overshootRate: perMovement(overshoots),

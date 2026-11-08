@@ -43,6 +43,12 @@ describe.each(setups)('Primary Submovement at $sensitivity cm/360, $dpi DPI', (s
       expect(analysis.overshoots).toBe(analysis.movementCount)
     })
 
+    it('is found after a reaction time too: an overshoot is still an Overshoot', () => {
+      const { analysis } = analyse(aimBot({ gain: 1.3, reactionMs: 250 }), setup, tickMs)
+      expect(analysis.movements.filter((m) => m.outcome !== 'overshoot')).toEqual([])
+      expect(analysis.smoothness).toBeCloseTo(2, 1)
+    })
+
     it('of a bot that stops short is an Undershoot in every Aim Movement', () => {
       const { analysis } = analyse(aimBot({ gain: 0.7 }), setup, tickMs)
       expect(analysis.movementCount).toBeGreaterThan(30)
@@ -86,6 +92,24 @@ describe.each(setups)('Path Deviation at $sensitivity cm/360, $dpi DPI', (setup)
     expect(analysis.pathDeviation).toBeGreaterThan(2)
     expect(analysis.pathDeviation).toBeLessThan(3)
     expect(analysis.movements.every((m) => m.pathDeviation > 1)).toBe(true)
+  })
+})
+
+describe.each(setups)('Mouse speed at $sensitivity cm/360, $dpi DPI', (setup) => {
+  it.each([1, 8])('is the angular distance travelled over the time from target appearance to hit, with %i ms ticks', (tickMs) => {
+    const { analysis } = analyse(lineBot(), setup, tickMs)
+    // a straight line, so the distance travelled is the Ideal Path
+    const expected =
+      analysis.movements.reduce((sum, m) => sum + m.idealDistance, 0) /
+      (analysis.movements.reduce((sum, m) => sum + m.endMs - m.startMs, 0) / 1000)
+    expect(analysis.mouseSpeed).toBeGreaterThan(expected * 0.95)
+    expect(analysis.mouseSpeed).toBeLessThan(expected * 1.05)
+  })
+
+  it('is higher for a bot that swings faster', () => {
+    const slow = analyse(lineBot({ burstMs: 240 }), setup).analysis.mouseSpeed
+    const fast = analyse(lineBot({ burstMs: 80 }), setup).analysis.mouseSpeed
+    expect(fast).toBeGreaterThan(slow * 1.5)
   })
 })
 

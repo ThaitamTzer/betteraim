@@ -1,5 +1,7 @@
 // Public surface of the headless core. The render and UI layers import from here only.
 export { aimDelta, angleBetween, degreesPerCount, directionOf, offsetAim, verticalFovDeg, wrapDeg } from './aim'
+export { analyseRun } from './analysis'
+export type { AimMovement, ClickingAnalysis, Outcome, RunAnalysis, RunData, TrackingAnalysis } from './analysis'
 export { createRng } from './rng'
 export type { Rng } from './rng'
 export { createRun, replay, RUN_DURATION_MS, STEP_MS } from './run'
