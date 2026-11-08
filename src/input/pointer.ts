@@ -1,7 +1,21 @@
 /** Raw mouse input for the app shell. Everything here is DOM; the core only ever sees the timestamped result. */
 
-/** Chromium exposes `pointerrawupdate`, and is the only engine with unadjusted (raw) movement. Used as an early hint. */
+/** Chromium and Firefox 148+ expose `pointerrawupdate`; Safari does not but may still give raw movement. Only an early hint. */
 export const rawInputLikelySupported = (): boolean => 'onpointerrawupdate' in window
+
+/** Settles with the next pointer lock outcome: resolves on `pointerlockchange`, rejects on `pointerlockerror`. */
+const lockEvent = (): Promise<void> =>
+  new Promise((resolve, reject) => {
+    const done = (settle: () => void) => () => {
+      document.removeEventListener('pointerlockchange', onChange)
+      document.removeEventListener('pointerlockerror', onError)
+      settle()
+    }
+    const onChange = done(resolve)
+    const onError = done(() => reject(new DOMException('The pointer lock was refused.', 'UnknownError')))
+    document.addEventListener('pointerlockchange', onChange)
+    document.addEventListener('pointerlockerror', onError)
+  })
 
 /**
  * Captures the pointer asking for unadjusted movement. Resolves to whether movement is raw: false when the
@@ -19,9 +33,9 @@ export async function lockPointer(element: Element): Promise<boolean> {
     },
   }
   const attempt: unknown = element.requestPointerLock(options)
-  if (!(attempt instanceof Promise)) return false // older browsers return nothing and ignore the option
   try {
-    await attempt
+    // An engine that returns nothing still grants (or refuses) the lock by event, and may well have read the option.
+    await (attempt instanceof Promise ? attempt : lockEvent())
     return optionRead
   } catch (error) {
     if (!(error instanceof DOMException) || error.name !== 'NotSupportedError') throw error

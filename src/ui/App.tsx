@@ -2,6 +2,8 @@ import { useState } from 'react'
 import type { ReactElement } from 'react'
 import { Home } from './screens/Home'
 import { Converter } from './screens/Converter'
+import { Finder } from './screens/Finder'
+import { FinderBreak } from './screens/FinderBreak'
 import { Onboarding } from './screens/Onboarding'
 import { Options } from './screens/Options'
 import { Practice } from './screens/Practice'
@@ -25,6 +27,8 @@ const screens: Screens = {
   runs: Runs,
   history: History,
   session: SessionSummary,
+  finder: Finder,
+  finderSession: FinderBreak,
 }
 
 export function App() {
@@ -35,7 +39,8 @@ export function App() {
   const Screen = screens[route.name] as (props: ScreenProps<Route['name']>) => ReactElement
   return (
     <>
-      {route.name !== 'run' && (
+      {/* No nav inside a Finder Session: Past Runs prints each Run's Sensitivity, which a Session must never show */}
+      {route.name !== 'run' && route.name !== 'finderSession' && (
         <header className="topbar">
           <button type="button" className="brand" onClick={() => go({ name: 'home' })}>
             BetterAim

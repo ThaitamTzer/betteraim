@@ -67,6 +67,17 @@ replaySteps(record, record.input, ({ crosshair, held, targets }) => {
   east/north (east = `wrapDeg(dyaw) * cos(pitch)`, north = `dpitch`) and project it on `(sin heading, cos heading)`.
   Positive is Ahead, negative is Behind. Summing the on-target steps and dividing by 30 000 gives Strafe's Score back exactly.
 
+## Sensitivity Finder Session plan (`finder/plan.ts`)
+- `planSession({ centre, levels, weights, seed }) => PlannedRun[]` (`{ scenario, seed, sensitivity, warmup }`), everything derived from the Session `seed`.
+  `coarseLevels(centre)` is the coarse phase, `centre x 2^(k/3)` for k = -3 ... 3; `levels` is an input so the fine phase (#11) passes its own 5.
+- Order: 2 Warm-up Runs (one per drawn Scenario, at `centre`, seeds of their own so the counted target sequence is not rehearsed), then
+  each drawn Scenario once at every level, shuffled. All levels of a Scenario share one seed; the two Scenarios differ.
+- Scenario draw: category by weight, then a Scenario of it uniformly, twice, skipping the first pick. With 2 Scenarios per category the long-run
+  category share equals the weights exactly (the model in #10 re-weights by actual vs target share anyway).
+- Saved Runs carry `mode: 'finder'`, `warmup`, `sessionId` and `levels` (levels per Scenario). A (Session, Scenario) pair is complete when it has
+  `levels` non-warm-up Runs; an abandoned or quit Session leaves incomplete pairs for #10 to exclude. Run order within a Session is `startedAt`.
+- The shell side (session loop, screens that never print a Sensitivity) is in `src/ui/finder.ts`.
+
 ## Adding a Scenario
 Implement `ScenarioDefinition` (`rules(seed)` returns `Rules`: `targets`, `events`, `score`, plus `shoot` for Clicking and
 `step(t, aim, held)` for Tracking) and add it to `scenarios/index.ts`. Micro is `createClickingScenario({ id: 'micro', ... })` in `scenarios/micro.ts`. A definition also carries `name` and `description`: Practice's picker lists the registry and shows them.
