@@ -42,7 +42,8 @@ export function Chart({ x, series, markers = [], bands = [], formatX = String, x
       {
         width: el.clientWidth || 480,
         height,
-        scales: { x: { time: false, range: (_u, min, max) => (min === max ? [min - 1, max + 1] : [min, max]) } },
+        // a little room so the first and last points do not sit on the frame (and a lone point is not on a collapsed axis)
+        scales: { x: { time: false, range: (_u, min, max) => [min - ((max - min) * 0.04 || 1), max + ((max - min) * 0.04 || 1)] } },
         axes: [
           { ...axis, space: 70, incrs: [1, 2, 5, 10, 20, 50, 100], values: (_u, splits) => splits.map((v) => formatX(v)) },
           axis,

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { scenarios } from '../../core'
 import type { ScenarioId } from '../../core'
 import { newSeed } from '../defaults'
@@ -6,13 +7,16 @@ import type { Route, ScreenProps } from '../routes'
 
 export function Practice({ route, go }: ScreenProps<'practice'>) {
   const { sensitivity, dpi, fov, gameProfileId } = route
+  // One Practice Session per sitting: made when the picker opens from Home, carried through the Runs and the result screens
+  // (`more` comes back here with it) and dropped when the player leaves Practice.
+  const [sessionId] = useState(() => route.sessionId ?? crypto.randomUUID())
 
-  // A fresh seed per Run; "Play again" on the result screen calls this again. Practice Runs have no Session.
+  // A fresh seed per Run; "Play again" on the result screen calls this again.
   const runRoute = (scenario: ScenarioId): Extract<Route, { name: 'run' }> => ({
     name: 'run',
     params: { scenario, seed: newSeed(), sensitivity, dpi, fov },
-    meta: { gameProfileId, mode: 'practice', warmup: false },
-    next: (record) => ({ name: 'result', record, again: runRoute(scenario) }),
+    meta: { gameProfileId, mode: 'practice', warmup: false, sessionId },
+    next: (record) => ({ name: 'result', record, again: runRoute(scenario), more: { ...route, sessionId } }),
   })
 
   return (

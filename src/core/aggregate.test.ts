@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { aggregateRuns, byDay, bySession, createMemoryStore, loadAnalysed, tallyShots } from './index'
 import type { AnalysedRun, ClickingAnalysis } from './index'
-import { aimBot, missBot } from './testing/bots'
+import { aimBot, missBot, trackBot } from './testing/bots'
 import { testRecord } from './testing/records'
 
 const HOUR = 3_600_000
@@ -84,17 +84,25 @@ describe('aggregating Runs from the store', () => {
     ])
   })
 
-  it('gives a Tracking Scenario its Score and an empty slot for the Tracking metrics', () => {
-    // Strafe and Switch Runs are hand-built here: the aggregator only reads Score and the Analysis category.
-    const run = (id: string, scenario: 'strafe' | 'switch', score: number): AnalysedRun => ({
-      run: { ...testRecord({}, { id }), scenario, score },
-      analysis: { category: 'tracking' },
-    })
-    const { scenarios } = aggregateRuns([run('a', 'strafe', 40), run('b', 'strafe', 60), run('c', 'switch', 7)])
-    expect(scenarios.map((s) => [s.scenario, s.runs, s.score.mean, s.score.best, s.metrics.category])).toEqual([
-      ['strafe', 2, 50, 60, 'tracking'],
-      ['switch', 1, 7, 7, 'tracking'],
+  it('gives a Tracking Scenario its Score per Scenario and an empty slot for the Tracking metrics', async () => {
+    const store = createMemoryStore()
+    const records = [
+      testRecord({ scenario: 'strafe', seed: 1 }, { id: 's1', startedAt: 10 }, trackBot()),
+      testRecord({ scenario: 'strafe', seed: 2 }, { id: 's2', startedAt: 20 }, trackBot({ leadMs: 300 })),
+      testRecord({ scenario: 'switch', seed: 3 }, { id: 'w1', startedAt: 30 }, trackBot()),
+    ]
+    await store.save(records)
+    const { scenarios } = aggregateRuns(await loadAnalysed(store))
+    const [strafe, sw] = scenarios
+    expect(scenarios.map((s) => [s.scenario, s.runs, s.metrics.category])).toEqual([
+      ['strafe', 2, 'tracking'],
+      ['switch', 1, 'tracking'],
     ])
+    // Strafe is a percentage and Switch a count: each keeps its own unit, they are never mixed.
+    expect(records[0]!.score).not.toBe(records[1]!.score)
+    expect(strafe?.score.mean).toBeCloseTo((records[0]!.score + records[1]!.score) / 2, 10)
+    expect(strafe?.score.best).toBe(Math.max(records[0]!.score, records[1]!.score))
+    expect(sw?.score).toEqual({ mean: records[2]!.score, best: records[2]!.score })
   })
 
   it('aggregates nothing for no Runs', () => {

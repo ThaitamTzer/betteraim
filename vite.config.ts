@@ -5,6 +5,6 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   base: '/betteraim/',
   plugins: [react()],
-  build: { chunkSizeWarningLimit: 800 }, // three.js alone is ~700 kB; the app is one small screen shell
+  build: { chunkSizeWarningLimit: 900 }, // three.js alone is ~700 kB, uPlot adds ~50 kB; the app is a small screen shell
   test: { include: ['src/**/*.test.ts'] },
 })
