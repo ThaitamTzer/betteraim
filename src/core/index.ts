@@ -1,5 +1,7 @@
 // Public surface of the headless core. The render and UI layers import from here only.
 export { aimDelta, angleBetween, degreesPerCount, directionOf, offsetAim, verticalFovDeg, wrapDeg } from './aim'
+export { cm360For, convertSensitivity, eDpi, gameProfiles, gameSensitivityFor, getGameProfile, isGameProfileId, profileFov, readSensitivity } from './game-profiles'
+export type { GameFov, GameProfile, GameProfileId, SensitivityReading } from './game-profiles'
 export { createRng } from './rng'
 export type { Rng } from './rng'
 export { createRun, replay, RUN_DURATION_MS, STEP_MS } from './run'

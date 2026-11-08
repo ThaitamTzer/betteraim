@@ -132,7 +132,8 @@ button:disabled {
   border-color: var(--accent);
 }
 
-.field input {
+.field input,
+.field select {
   flex: 1;
   min-width: 0;
   padding: 0.6rem 0.75rem;
@@ -141,7 +142,12 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-.field input:focus-visible {
+.field select option {
+  background: var(--panel);
+}
+
+.field input:focus-visible,
+.field select:focus-visible {
   outline: none;
 }
 
@@ -214,6 +220,45 @@ button:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.page > .actions {
+  margin-top: 2rem;
+}
+
+/* Converter result */
+.table-wrap {
+  margin: 2rem 0 1rem;
+  overflow-x: auto;
+}
+
+.results {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.results th,
+.results td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+
+.results th:first-child,
+.results td:first-child {
+  text-align: left;
+}
+
+.results th {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.results .answer {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* Run screen */

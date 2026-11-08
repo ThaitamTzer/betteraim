@@ -8,7 +8,11 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 - `run.ts` the engine: `createRun(params)`, `replay`. `scenario.ts` what a Scenario implements (`Rules`).
 - `scenarios/` `clicking.ts` (shared by Flick and Micro), `flick.ts`, `micro.ts`, `index.ts` (the registry, one line per Scenario).
 - `rng.ts` `createRng(seed)`. `tally.ts` `tallyShots`. `testing/` bots and test params (tests only).
-- Not here yet: Converter/Game Profiles (#3), storage and binary encoding of `RunRecord.input` (#4), Analysis (#7, #8),
+- `game-profiles.ts` the 7 Game Profiles (yaw, vertical setting, FOV, default Game Sensitivity, Clicking/Tracking weights, each
+  value with its source), the Game Sensitivity <-> cm/360 formulas, the Converter (`convertSensitivity`, `readSensitivity`) and
+  `profileFov(id)`, the `Fov` a Run renders with (always vertical, so a horizontal FOV on a 4:3 or 16:9 base is Hor+).
+  A Game Profile id (`GameProfileId`) is what `RunMeta.gameProfileId` holds. Add a game by adding one entry to the table.
+- Not here yet: storage and binary encoding of `RunRecord.input` (#4), Analysis (#7, #8),
   Finder (#9-#11), AI Coach (#14, #15).
 
 ## Conventions

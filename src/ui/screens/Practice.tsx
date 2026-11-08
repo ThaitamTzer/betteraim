@@ -1,6 +1,7 @@
 import { scenarios } from '../../core'
 import type { ScenarioId } from '../../core'
 import { newSeed } from '../defaults'
+import { fmt } from '../format'
 import type { Route, ScreenProps } from '../routes'
 
 export function Practice({ route, go }: ScreenProps<'practice'>) {
@@ -19,7 +20,7 @@ export function Practice({ route, go }: ScreenProps<'practice'>) {
       <p className="eyebrow">Practice</p>
       <h1>Pick a Scenario</h1>
       <p className="lede">
-        Each Run lasts 30 seconds, at your Sensitivity of {sensitivity} cm/360 and {dpi} DPI. Practice Runs never count
+        Each Run lasts 30 seconds, at your Sensitivity of {fmt(sensitivity)} cm/360 and {dpi} DPI. Practice Runs never count
         toward the Sensitivity Finder.
       </p>
       <ul className="scenarios">
