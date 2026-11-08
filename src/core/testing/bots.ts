@@ -1,4 +1,4 @@
-import { aimDelta, degreesPerCount, offsetAim } from '../aim'
+import { aimDelta, aimOf, cross, degreesPerCount, directionOf, dot, offsetAim } from '../aim'
 import { createRun, RUN_DURATION_MS } from '../run'
 import type { Aim, RunParams, RunResult, RunState } from '../types'
 
@@ -110,6 +110,57 @@ export function trackBot({ leadMs = 0 }: TrackBotOptions = {}): Bot {
     locked = target.id
     const ahead = offsetAim(target, ((target.speed ?? 0) * leadMs) / 1000, target.heading ?? 0)
     return { turn: aimDelta(state.crosshair, ahead), fire: true }
+  }
+}
+
+export interface LineBotOptions {
+  /** Duration of each push toward the target. */
+  burstMs?: number
+  /** The way to the target is covered in this many equal pushes (1 is smooth, more is jerky). */
+  bursts?: number
+  /** Standstill between pushes. */
+  pauseMs?: number
+  /** Degrees the path bows sideways away from the Ideal Path at its midpoint (0 is a straight line). */
+  bow?: number
+}
+
+/**
+ * Clicking bot that follows the Ideal Path (the great circle to the target), unlike `aimBot`, which interpolates in
+ * yaw/pitch and so drifts off that circle at high pitch. It never overshoots; it then clicks.
+ */
+export function lineBot({ burstMs = 120, bursts = 1, pauseMs = 0, bow = 0 }: LineBotOptions = {}): Bot {
+  const total = bursts * burstMs + (bursts - 1) * pauseMs
+  let seen = -1
+  let start = 0
+  let from = directionOf({ yaw: 0, pitch: 0 })
+  let firing = false
+  return (state) => {
+    const target = state.targets[0]
+    if (!target) return
+    if (target.id !== seen) {
+      seen = target.id
+      start = state.t
+      from = directionOf(state.crosshair)
+      firing = false
+    }
+    const to = directionOf(target)
+    const normal = cross(from, to)
+    const size = Math.hypot(...normal)
+    const angle = Math.atan2(size, dot(from, to))
+    const elapsed = state.t - start
+    const burst = Math.min(bursts - 1, Math.floor(elapsed / (burstMs + pauseMs)))
+    const progress = elapsed >= total ? 1 : (burst + minJerk((elapsed - burst * (burstMs + pauseMs)) / burstMs)) / bursts
+    // Slerp along the great circle, then bow sideways (along the plane's normal) by bow x sin(pi x progress) degrees.
+    const sideways = (bow * Math.sin(Math.PI * progress) * Math.PI) / 180
+    const [a, b] = [Math.sin((1 - progress) * angle) / Math.sin(angle), Math.sin(progress * angle) / Math.sin(angle)]
+    const desired = aimOf(
+      [0, 1, 2].map(
+        (i) => ((from[i] ?? 0) * a + (to[i] ?? 0) * b) * Math.cos(sideways) + ((normal[i] ?? 0) / size) * Math.sin(sideways),
+      ) as [number, number, number],
+    )
+    const arrived = elapsed >= total
+    if (arrived) firing = !firing
+    return { turn: aimDelta(state.crosshair, desired), fire: arrived && firing }
   }
 }
 

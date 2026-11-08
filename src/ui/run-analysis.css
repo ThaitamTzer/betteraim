@@ -1,0 +1,46 @@
+.analysis {
+  margin: 2rem 0;
+}
+
+.analysis h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+}
+
+.analysis dl {
+  display: grid;
+  gap: 1px;
+  margin: 0 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.analysis dl > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0.15rem 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--panel);
+}
+
+.analysis dt {
+  font-weight: 600;
+}
+
+.analysis dd {
+  margin: 0;
+}
+
+.analysis .value {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.analysis .note {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.9rem;
+}

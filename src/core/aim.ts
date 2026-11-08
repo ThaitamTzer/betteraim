@@ -15,7 +15,7 @@ export const aimDelta = (from: Aim, to: Aim): Aim => ({
   pitch: to.pitch - from.pitch,
 })
 
-type Vec = readonly [number, number, number]
+export type Vec = readonly [number, number, number]
 
 // Unit vector for a view direction. Right-handed, +y up, forward is -z (so yaw > 0 points to +x).
 export const directionOf = ({ yaw, pitch }: Aim): Vec => [
@@ -23,6 +23,12 @@ export const directionOf = ({ yaw, pitch }: Aim): Vec => [
   Math.sin(pitch * RAD),
   -Math.cos(pitch * RAD) * Math.cos(yaw * RAD),
 ]
+
+/** The view direction of a unit vector, the inverse of `directionOf`. */
+export const aimOf = ([x, y, z]: Vec): Aim => ({ yaw: Math.atan2(x, -z) * DEG, pitch: Math.asin(Math.max(-1, Math.min(1, y))) * DEG })
+
+export const dot = (a: Vec, b: Vec): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+export const cross = (a: Vec, b: Vec): Vec => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
 
 /** True angular distance between two directions, in degrees (never the flat yaw/pitch distance). */
 export const angleBetween = (a: Aim, b: Aim): number => {

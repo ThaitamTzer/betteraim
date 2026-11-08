@@ -323,21 +323,21 @@ button:disabled {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 14px;
-  height: 14px;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  background:
-    linear-gradient(var(--text), var(--text)) center / 2px 100% no-repeat,
-    linear-gradient(var(--text), var(--text)) center / 100% 2px no-repeat;
-  mix-blend-mode: difference;
 }
 
-.crosshair.on-target {
-  background:
-    linear-gradient(var(--on-target), var(--on-target)) center / 3px 100% no-repeat,
-    linear-gradient(var(--on-target), var(--on-target)) center / 100% 3px no-repeat;
-  mix-blend-mode: normal;
+/* Tracking: a ring around the player's own crosshair while it is on a target. */
+.on-target-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--on-target);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .lede + .actions {
