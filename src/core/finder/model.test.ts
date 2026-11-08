@@ -91,6 +91,41 @@ describe('the confidence interval', () => {
     expect(late.enoughData).toBe(true)
   })
 
+  describe('near the edge of the tested range', () => {
+    // coarseLevels(40) tests 20 to 80 cm/360.
+    it('is never enough data for an optimum just beyond the range, however many Sessions (it used to be, from a collapsed clamped interval)', () => {
+      const fits = seeds(40).map((seed) => fitFinder(syntheticRuns(syntheticPlayer({ optimum: 18 }), coarse(16), seed), { weights: WEIGHTS }))
+      expect(fits.filter((f) => f.interval !== null).length, 'some fits find an interior peak').toBeGreaterThan(3)
+      expect(fits.filter((f) => f.enoughData)).toHaveLength(0)
+    })
+
+    it('reports an interval that reaches the edge of the tested range as it is, not cut at the edge, and not enough data', () => {
+      const fits = seeds(40).map((seed) => fitFinder(syntheticRuns(syntheticPlayer({ optimum: 20 }), coarse(16), seed), { weights: WEIGHTS }))
+      const reaching = fits.filter((f) => f.interval && f.interval.low <= f.range!.min)
+      expect(reaching.length).toBeGreaterThan(5)
+      expect(reaching.some((f) => f.interval!.low < f.range!.min)).toBe(true)
+      expect(reaching.filter((f) => f.enoughData)).toHaveLength(0)
+    })
+
+    it('says enough data only for an interval strictly inside the tested range', () => {
+      for (const optimum of [18, 22, 26, 33, 50, 70]) {
+        for (const seed of seeds(6)) {
+          const f = fitFinder(syntheticRuns(syntheticPlayer({ optimum }), coarse(24), seed), { weights: WEIGHTS })
+          if (f.enoughData) {
+            expect(f.interval!.low, `optimum ${optimum}`).toBeGreaterThan(f.range!.min)
+            expect(f.interval!.high, `optimum ${optimum}`).toBeLessThan(f.range!.max)
+            expect(f.interval!.halfWidth).toBeLessThan(0.1)
+          }
+        }
+      }
+    })
+
+    it('still says enough data in the middle of the range, so the rule is not simply "never"', () => {
+      const f = fitFinder(syntheticRuns(syntheticPlayer({ optimum: 40 }), coarse(30), 4), { weights: WEIGHTS })
+      expect(f.enoughData).toBe(true)
+    })
+  })
+
   it('is the same for the same data, whatever the order the Runs arrive in', () => {
     const runs = syntheticRuns(player, coarse(6), 7)
     const once = fitFinder(runs, { weights: WEIGHTS })

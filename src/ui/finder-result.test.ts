@@ -49,6 +49,18 @@ describe('the Finder result text', () => {
     expect(withHalfWidth(0.0996, true)).toContain('within ±9.9%')
   })
 
+  it('says the interval reaches the edge of what was tested, even when it is narrower than +-10%', () => {
+    const base = fitOf(8)
+    const { min, max } = base.range!
+    for (const interval of [{ low: min * 0.97, high: min * 1.1, halfWidth: 0.06 }, { low: max * 0.9, high: max, halfWidth: 0.05 }]) {
+      const view = resultView({ ...base, enoughData: false, interval }, 'valorant', 800)
+      expect(view.enough).toBe(false)
+      expect(view.message).toMatch(/reaches the edge of the range you tested/)
+      expect(view.message).not.toMatch(/^Enough data/)
+    }
+    expect(resultView({ ...base, enoughData: false, interval: { low: 30, high: 36, halfWidth: 0.1 } }, 'valorant', 800).message).not.toMatch(/edge/)
+  })
+
   it('asks for another Session when one cannot give an interval', () => {
     expect(resultView(fitOf(1), 'valorant', 800).message).toBe('1 Session so far. Play at least one more Session to get a confidence interval.')
   })

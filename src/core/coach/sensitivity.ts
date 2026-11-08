@@ -114,6 +114,12 @@ function shownBounds(low: number, high: number, peak: number): [number, number] 
   return lo <= hi ? [lo, hi] : [round(peak), round(peak)]
 }
 
+/** Where the AI Coach may choose: the interval cut to what was tested (the interval itself may reach past it, ADR-0004), so it never picks an untested Sensitivity. */
+function choiceBounds(fit: FinderFit): { low: number; high: number } {
+  const { low, high } = fit.interval ?? { low: fit.peak ?? 0, high: fit.peak ?? 0 }
+  return { low: Math.max(low, fit.range?.min ?? low), high: Math.min(high, fit.range?.max ?? high) }
+}
+
 export interface SensitivityPayload {
   /** What each kind of number is in: the AI Coach must not have to guess. */
   units: Record<string, string>
@@ -136,7 +142,7 @@ export interface SensitivityPayload {
  */
 export function buildSensitivityPayload({ fit, items, profile, context }: Pick<SnapshotInput, 'fit' | 'profile' | 'context'> & { items: readonly AnalysedRun[] }): SensitivityPayload {
   const game = getGameProfile(profile)
-  const { low, high } = fit.interval ?? { low: fit.peak ?? 0, high: fit.peak ?? 0 }
+  const { low, high } = choiceBounds(fit)
   const bounds = shownBounds(low, high, fit.peak ?? 0)
   const range = fit.range ?? { min: 1, max: 1 }
   const span = Math.log(range.max / range.min)
@@ -274,7 +280,7 @@ export async function recommendSensitivity(input: RecommendInput): Promise<Recom
   const hit = cache && cachedRecommendation({ ...input, cache })
   if (hit) return hit
 
-  const { low, high } = fit.interval!
+  const { low, high } = choiceBounds(fit)
   const used = new Set(fit.counts.used.map((r) => r.id))
   const payload = buildSensitivityPayload({ fit, items: items.filter((i) => used.has(i.run.id)), profile: input.profile, context: input.context })
   const bounds: [number, number] = [payload.intervalCm360.low, payload.intervalCm360.high]
