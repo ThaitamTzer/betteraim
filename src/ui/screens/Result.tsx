@@ -1,4 +1,5 @@
 import { tallyShots } from '../../core'
+import { RunAnalysisPanel } from '../RunAnalysisPanel'
 import type { ScreenProps } from '../routes'
 
 export function Result({ route, go }: ScreenProps<'result'>) {
@@ -27,6 +28,7 @@ export function Result({ route, go }: ScreenProps<'result'>) {
           <dd>{(accuracy * 100).toFixed(0)}%</dd>
         </div>
       </dl>
+      <RunAnalysisPanel record={record} />
       <div className="actions">
         <button type="button" className="primary" onClick={() => go(again)} autoFocus>
           Play again
