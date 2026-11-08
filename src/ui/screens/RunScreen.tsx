@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { createRun, RUN_DURATION_MS } from '../../core'
 import type { Run, RunRecord } from '../../core'
+import { createHitSound, targetGone } from '../../audio/hit-sound'
 import { captureInput, lockPointer, rawInputLikelySupported } from '../../input/pointer'
 import { createScene } from '../../render/scene'
+import { Crosshair } from '../Crosshair'
+import { loadPreferences } from '../preferences'
 import type { ScreenProps } from '../routes'
 
 interface Live {
@@ -21,6 +24,8 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
   const inputRef = useRef<ReturnType<typeof captureInput> | null>(null)
   const live = useRef<Live | null>(null)
   const latest = useRef({ route, go })
+  const [prefs] = useState(loadPreferences) // read once per screen: Options changes apply from the next Run
+  const [sound] = useState(createHitSound)
   const [playing, setPlaying] = useState(false)
   const [abandoned, setAbandoned] = useState(false)
   const [raw, setRaw] = useState<boolean | null>(null) // null until the pointer was captured once
@@ -36,12 +41,12 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
     if (!canvas || !arrow) return
     let scene: ReturnType<typeof createScene>
     try {
-      scene = createScene(canvas, latest.current.route.params.fov, arrow)
+      scene = createScene(canvas, latest.current.route.params.fov, arrow, prefs.targetColor)
     } catch {
       setProblem('WebGL is not available in this browser, so the 3D scene cannot be drawn.')
       return
     }
-    const input = captureInput()
+    const input = captureInput(prefs.fireButton)
     inputRef.current = input
     const idle = createRun(latest.current.route.params).state()
 
@@ -54,17 +59,21 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
     }
 
     let frame = 0
+    let aliveBefore: number[] = []
     const loop = () => {
       const l = live.current
       if (l) {
         for (const { at, event } of input.drain()) l.run.push({ ...event, t: at - l.origin })
         l.run.push({ kind: 'tick', t: performance.now() - l.origin })
         const state = l.run.state()
+        if (prefs.hitSound.on && targetGone(aliveBefore, state.targets)) sound.play(prefs.hitSound.volume)
+        aliveBefore = state.targets.map((t) => t.id)
         if (timeRef.current) timeRef.current.textContent = Math.max(0, (RUN_DURATION_MS - state.t) / 1000).toFixed(1)
         if (scoreRef.current) scoreRef.current.textContent = state.score.toFixed(1)
         scene.draw(state)
         if (state.done) finish(l)
       } else {
+        aliveBefore = [] // a restarted Run must not beep for the abandoned one's targets
         input.drain()
         scene.draw(idle)
       }
@@ -88,14 +97,16 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
       if (document.pointerLockElement) document.exitPointerLock()
       input.stop()
       inputRef.current = null
+      sound.close()
       scene.dispose()
     }
-  }, [])
+  }, [prefs, sound])
 
   const start = async () => {
     const canvas = canvasRef.current
     const input = inputRef.current
     if (!canvas || !input || live.current) return
+    sound.prime() // needs this click's user gesture
     setProblem(null)
     try {
       setRaw(await lockPointer(canvas))
@@ -125,10 +136,10 @@ export function RunScreen({ route, go }: ScreenProps<'run'>) {
   return (
     <div className="stage" onClick={playing ? undefined : start}>
       <canvas ref={canvasRef} className="viewport" />
-      <div ref={arrowRef} className="edge-arrow" hidden />
+      <div ref={arrowRef} className="edge-arrow" style={{ borderLeftColor: prefs.targetColor }} hidden />
       {playing && (
         <>
-          <div className="crosshair" aria-hidden="true" />
+          <Crosshair crosshair={prefs.crosshair} />
           <div className="hud">
             <span>
               Time <b ref={timeRef}>30.0</b>
