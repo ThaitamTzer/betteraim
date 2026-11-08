@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { ReactElement } from 'react'
 import { Home } from './screens/Home'
+import { Converter } from './screens/Converter'
+import { Onboarding } from './screens/Onboarding'
 import { Result } from './screens/Result'
 import { RunScreen } from './screens/RunScreen'
 import type { Go, Route, ScreenProps, Screens } from './routes'
@@ -8,6 +10,8 @@ import './app.css'
 
 const screens: Screens = {
   home: Home,
+  onboarding: Onboarding,
+  converter: Converter,
   run: RunScreen,
   result: Result,
 }

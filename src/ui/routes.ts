@@ -7,6 +7,8 @@ import type { RunMeta, RunParams, RunRecord } from '../core'
  */
 export type Route =
   | { name: 'home' }
+  | { name: 'onboarding' }
+  | { name: 'converter' }
   | {
       name: 'run'
       params: RunParams
