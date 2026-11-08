@@ -155,6 +155,11 @@ describe('OpenAI-compatible adapter', () => {
     expect((failure as Error).message).not.toContain('OLLAMA_ORIGINS')
   })
 
+  it('tells the player to check the key when OpenAI cannot be reached (it answers a wrong key without CORS headers)', async () => {
+    const failure = await provider(fakeFetch(new TypeError('Failed to fetch')), { baseUrl: 'https://api.openai.com/v1', model: 'x', apiKey: 'sk-wrong' }).complete(ask).catch((e: unknown) => e)
+    expect(failure).toMatchObject({ kind: 'network', message: expect.stringContaining('check the key') })
+  })
+
   it('surfaces refusals, cut-off answers and replies that are not chat answers', async () => {
     const run = (answer: Response) => provider(fakeFetch(answer)).complete(ask)
     await expect(run(reply(null, 'stop', { refusal: 'I cannot help with that' }))).rejects.toMatchObject({ kind: 'refusal' })

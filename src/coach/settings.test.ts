@@ -92,5 +92,6 @@ describe('being ready', () => {
     expect(createCoachProvider(ready)).not.toBeNull()
     expect(missingSetup({ ...ready, openai: { ...ready.openai, baseUrl: 'http://192.168.0.2/v1' } })).toMatch(/URL/)
     expect(createCoachProvider({ ...defaultCoachSettings, anthropic: { apiKey: 'k', model: 'claude-opus-5-5' } })).not.toBeNull()
+    expect(missingSetup({ ...defaultCoachSettings, anthropic: { apiKey: 'k', model: '' } })).toMatch(/model/)
   })
 })

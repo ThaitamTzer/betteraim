@@ -86,7 +86,7 @@ export function baseUrlProblem(url: string): string | null {
 
 /** What the player still has to fill in before the AI Coach can be asked, or null when it is ready. */
 export function missingSetup(s: CoachSettings): string | null {
-  if (s.provider === 'anthropic') return s.anthropic.apiKey ? null : 'Add your Anthropic API key'
+  if (s.provider === 'anthropic') return !s.anthropic.apiKey ? 'Add your Anthropic API key' : s.anthropic.model ? null : 'Enter the model name'
   if (baseUrlProblem(normalizeBaseUrl(s.openai.baseUrl))) return 'Enter a valid base URL'
   return s.openai.model ? null : 'Enter the model name'
 }
