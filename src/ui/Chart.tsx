@@ -15,8 +15,11 @@ export interface ChartProps {
   /** Ascending x values shared by every series. */
   x: readonly number[]
   series: readonly ChartSeries[]
-  /** Vertical lines at an x, for example the Curve Peak of the Performance Curve. */
-  markers?: readonly { x: number; label?: string }[]
+  /**
+   * Vertical lines at an x, for example the Curve Peak of the Performance Curve. Labels sit one line lower per marker, so markers close
+   * together (the Curve Peak and the AI Coach's choice) stay readable; `tone` picks the line's colour (default `accent`).
+   */
+  markers?: readonly { x: number; label?: string; tone?: 'accent' | 'on-target' }[]
   /** Shaded ranges of x behind the lines, for example a confidence interval. */
   bands?: readonly { from: number; to: number }[]
   /** What the x axis and the legend call an x. Default: the number as it is. */
@@ -51,6 +54,7 @@ export function Chart({ x, series, markers = [], bands = [], formatX = String, x
     const muted = css.getPropertyValue('--muted').trim() || '#98a2b3'
     const line = css.getPropertyValue('--line').trim() || '#243044'
     const accent = css.getPropertyValue('--accent').trim() || palette[0]!
+    const tones = { accent, 'on-target': css.getPropertyValue('--on-target').trim() || palette[2]! }
     const axis = { stroke: muted, grid: { stroke: line, width: 1 }, ticks: { stroke: line, width: 1 } }
     const plot = new uPlot(
       {
@@ -98,18 +102,21 @@ export function Chart({ x, series, markers = [], bands = [], formatX = String, x
           draw: [
             (u) => {
               u.ctx.save()
-              u.ctx.strokeStyle = accent
-              u.ctx.fillStyle = accent
               u.ctx.setLineDash([6, 4])
               u.ctx.font = `${12 * devicePixelRatio}px system-ui, sans-serif`
-              for (const m of markers) {
+              markers.forEach((m, i) => {
                 const at = u.valToPos(m.x, 'x', true)
+                u.ctx.strokeStyle = u.ctx.fillStyle = tones[m.tone ?? 'accent']
                 u.ctx.beginPath()
                 u.ctx.moveTo(at, u.bbox.top)
                 u.ctx.lineTo(at, u.bbox.top + u.bbox.height)
                 u.ctx.stroke()
-                if (m.label) u.ctx.fillText(m.label, at + 4 * devicePixelRatio, u.bbox.top + 14 * devicePixelRatio)
-              }
+                if (m.label) {
+                  const nearRight = at > u.bbox.left + u.bbox.width * 0.8 // the label turns to the left of its line rather than run off the plot
+                  u.ctx.textAlign = nearRight ? 'right' : 'left'
+                  u.ctx.fillText(m.label, at + (nearRight ? -4 : 4) * devicePixelRatio, u.bbox.top + (14 + 16 * i) * devicePixelRatio)
+                }
+              })
               u.ctx.restore()
             },
           ],

@@ -98,3 +98,7 @@ export function createCoachProvider(s: CoachSettings): CoachProvider | null {
     ? createAnthropicProvider(s.anthropic)
     : createOpenAiProvider({ baseUrl: normalizeBaseUrl(s.openai.baseUrl), model: s.openai.model, apiKey: s.openai.apiKey || undefined })
 }
+
+/** Which provider and model would answer, for the key an answer is cached under (never the API key). Another model, or another endpoint, is another answer. */
+export const coachModelId = (s: CoachSettings): string =>
+  s.provider === 'anthropic' ? `anthropic:${s.anthropic.model}` : `openai:${normalizeBaseUrl(s.openai.baseUrl)}:${s.openai.model}`
