@@ -7,7 +7,7 @@ import { createWander } from './wander'
 const RADIUS_DEG = 2
 
 /**
- * Strafe (Tracking): one target that sways left and right (up to about 24 degrees either side, peaking near 50 degrees
+ * Strafe (Tracking): one target that sways left and right (up to about 24 degrees either side, peaking near 40 degrees
  * per second) and drifts a little up and down, changing direction smoothly. The player holds fire; Score is the
  * percentage of the Run so far that the fire button was held with the crosshair on the target (1 ms steps).
  */
