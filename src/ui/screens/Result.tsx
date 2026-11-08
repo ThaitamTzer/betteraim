@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { tallyShots } from '../../core'
+import { saveOutcome } from '../../storage/runs'
 import type { ScreenProps } from '../routes'
 import { formatScore, trackingRule } from '../score'
 
@@ -6,6 +8,10 @@ export function Result({ route, go }: ScreenProps<'result'>) {
   const { record, again } = route
   const { hits, shots, accuracy } = tallyShots(record.targetEvents)
   const rule = trackingRule[record.scenario]
+  const [saveError, setSaveError] = useState<string | null>(null)
+  useEffect(() => {
+    saveOutcome(record.id)?.catch((error: unknown) => setSaveError(error instanceof Error ? error.message : String(error)))
+  }, [record.id])
   return (
     <main className="page">
       <p className="eyebrow">Run complete</p>
@@ -30,6 +36,11 @@ export function Result({ route, go }: ScreenProps<'result'>) {
             <dd>{(accuracy * 100).toFixed(0)}%</dd>
           </div>
         </dl>
+      )}
+      {saveError !== null && (
+        <p className="warning" role="alert">
+          This Run could not be saved ({saveError}). Export your data from Past Runs and free some space.
+        </p>
       )}
       <div className="actions">
         <button type="button" className="primary" onClick={() => go(again)} autoFocus>

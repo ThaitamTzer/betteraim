@@ -1,21 +1,27 @@
-import { useState } from 'react'
-import { degreesPerCount } from '../../core'
+import { useEffect, useState } from 'react'
+import { cm360For, degreesPerCount, eDpi, getGameProfile, profileFov } from '../../core'
 import { rawInputLikelySupported } from '../../input/pointer'
-import { CUSTOM_PROFILE_ID, DEFAULT_FOV } from '../defaults'
+import { fmt } from '../format'
 import type { ScreenProps } from '../routes'
+import { loadSettings } from '../settings'
 
 export function Home({ go }: ScreenProps<'home'>) {
-  const [cm360, setCm360] = useState('30')
-  const [dpi, setDpi] = useState('800')
-  const sensitivity = Number(cm360)
-  const mouseDpi = Number(dpi)
-  const valid = sensitivity > 0 && sensitivity <= 1000 && mouseDpi >= 100 && mouseDpi <= 32000
+  const [settings] = useState(loadSettings)
+  // A first visit has no settings yet: onboarding comes first.
+  useEffect(() => {
+    if (!settings) go({ name: 'onboarding' })
+  }, [settings, go])
+  if (!settings) return <></>
+
+  const { gameProfileId, gameSensitivity, dpi } = settings
+  const game = getGameProfile(gameProfileId)
+  const sensitivity = cm360For(gameProfileId, gameSensitivity, dpi)
 
   return (
     <main className="page">
       <h1>Find the sensitivity you aim best with.</h1>
       <p className="lede">
-        A free aim trainer in your browser. Tell it your mouse setup, then practice a Scenario and see your Score.
+        A free aim trainer in your browser. Practice a Scenario with your {game.name} setup and see your Score.
       </p>
 
       {!rawInputLikelySupported() && (
@@ -25,36 +31,40 @@ export function Home({ go }: ScreenProps<'home'>) {
         </p>
       )}
 
-      <form
-        className="setup"
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (valid) go({ name: 'practice', sensitivity, dpi: mouseDpi, fov: DEFAULT_FOV, gameProfileId: CUSTOM_PROFILE_ID })
-        }}
-      >
-        <label>
-          <span>Sensitivity</span>
-          <span className="field">
-            <input type="number" inputMode="decimal" step="any" min="0.1" value={cm360} onChange={(e) => setCm360(e.target.value)} />
-            <span className="unit">cm/360</span>
-          </span>
-        </label>
-        <label>
-          <span>Mouse DPI</span>
-          <span className="field">
-            <input type="number" inputMode="numeric" step="any" min="100" value={dpi} onChange={(e) => setDpi(e.target.value)} />
-            <span className="unit">DPI</span>
-          </span>
-        </label>
-        <p className="hint">
-          {valid
-            ? `Each mouse count turns the view ${degreesPerCount(sensitivity, mouseDpi).toFixed(4)} degrees.`
-            : 'Enter a sensitivity above 0 and a DPI between 100 and 32000.'}
-        </p>
-        <button type="submit" className="primary" disabled={!valid}>
+      <dl className="stats">
+        <div>
+          <dt>Game Sensitivity</dt>
+          <dd>{fmt(gameSensitivity)}</dd>
+        </div>
+        <div>
+          <dt>Mouse DPI</dt>
+          <dd>{dpi}</dd>
+        </div>
+        <div>
+          <dt>Sensitivity (cm/360)</dt>
+          <dd>{fmt(sensitivity)}</dd>
+        </div>
+      </dl>
+      <p className="hint">
+        {game.name} at eDPI {fmt(eDpi(gameSensitivity, dpi))}. Each mouse count turns the view{' '}
+        {degreesPerCount(sensitivity, dpi).toFixed(4)} degrees.
+      </p>
+
+      <div className="actions">
+        <button
+          type="button"
+          className="primary"
+          onClick={() => go({ name: 'practice', sensitivity, dpi, fov: profileFov(gameProfileId), gameProfileId })}
+        >
           Practice
         </button>
-      </form>
+        <button type="button" onClick={() => go({ name: 'converter' })}>
+          Converter
+        </button>
+        <button type="button" onClick={() => go({ name: 'onboarding' })}>
+          Change setup
+        </button>
+      </div>
     </main>
   )
 }

@@ -16,5 +16,6 @@ export const testMeta = (overrides: Partial<RunMeta> = {}): RunMeta => ({
   mode: 'practice',
   warmup: false,
   sessionId: 'session-1',
+  env: { devicePixelRatio: 1, userAgent: 'test', rawInput: true },
   ...overrides,
 })

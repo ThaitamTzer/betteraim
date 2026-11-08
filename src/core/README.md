@@ -9,8 +9,15 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 - `scenarios/` `clicking.ts` (shared by Flick and Micro), `flick.ts`, `micro.ts`, `strafe.ts`, `switch.ts`, `wander.ts` (target motion
   for the Tracking Scenarios), `index.ts` (the registry, one line per Scenario).
 - `rng.ts` `createRng(seed)`. `tally.ts` `tallyShots`. `testing/` bots and test params (tests only).
-- Not here yet: Converter/Game Profiles (#3), storage and binary encoding of `RunRecord.input` (#4), Analysis (#7, #8),
-  Finder (#9-#11), AI Coach (#14, #15).
+- `codec.ts` lossless binary form of `input` and `targetEvents` (+ base64). `storage.ts` the `RunStore` port (`save`, `list(filter)`
+  summaries, `get`) and `createMemoryStore()` for tests. `exchange.ts` `exportData`/`importData`: one versioned JSON file, validated
+  before any write, merged by Run id. The IndexedDB adapter is shell code in `src/storage/`. `testing/records.ts` `testRecord()` is a
+  fully played record.
+- `game-profiles.ts` the 7 Game Profiles (yaw, vertical setting, FOV, default Game Sensitivity, Clicking/Tracking weights, each
+  value with its source), the Game Sensitivity <-> cm/360 formulas, the Converter (`convertSensitivity`, `readSensitivity`) and
+  `profileFov(id)`, the `Fov` a Run renders with (always vertical, so a horizontal FOV on a 4:3 or 16:9 base is Hor+).
+  A Game Profile id (`GameProfileId`) is what `RunMeta.gameProfileId` holds. Add a game by adding one entry to the table.
+- Not here yet: Analysis (#7, #8), Finder (#9-#11), AI Coach (#14, #15).
 
 ## Conventions
 - Units: degrees, ms since Run start, Sensitivity = cm/360. Yaw > 0 is right, pitch > 0 is up (crosshair pitch is clamped to
@@ -20,7 +27,9 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   at or after 30 000 ms ends the Run and is dropped. `state()` is live; `result()` (input, target events, Score) needs `done`.
 - Simulated time advances in 1 ms steps (`Rules.step`) whatever the tick rate; ticks are not stored in a record.
 - A persisted Run is `RunRecord = { ...params, ...meta, ...run.result() }`. The core never makes ids or reads a clock: the
-  shell supplies `RunMeta` (`id`, `startedAt`, `gameProfileId`, `mode`, `warmup`, `sessionId`, absent in Practice).
+  shell supplies `RunMeta` (`id`, `startedAt`, `gameProfileId`, `mode`, `warmup`, `sessionId`, absent in Practice, and `env`, absent only in old imports). `env` is the capture
+  environment (`devicePixelRatio`, `userAgent`, `rawInput`): `movementX/Y` units differ per browser, so old Runs need it to be re-analysed.
+- Storage: `list` returns summaries (no input), `get` the whole record. Importing never deletes; a Run with a known id is replaced.
 - Target log: `spawn` (with the crosshair at spawn), `shot` (`id` or `null` for a miss), `kill`. Replaying the input with
   `replay(params, input)` rebuilds targets over time for Analysis; no motion samples are logged.
 
