@@ -48,7 +48,7 @@ export function resultView(fit: FinderFit, gameProfileId: GameProfileId, dpi: nu
     }
     if (!interval) return `${sessions(counts.sessions)} so far. Play at least one more Session to get a confidence interval.`
     const edge = fit.range && (interval.low <= fit.range.min || interval.high >= fit.range.max)
-    if (edge) return `${sessions(counts.sessions)} so far. The interval (�${percent(interval.halfWidth)}) reaches the edge of the range you tested, so your Curve Peak is not pinned down yet; there is enough data once it is narrower than �${limit} and inside the tested range.`
+    if (edge) return `${sessions(counts.sessions)} so far. The interval (±${percent(interval.halfWidth)}) reaches the edge of the range you tested, so your Curve Peak is not pinned down yet; there is enough data once it is narrower than ±${limit} and inside the tested range.`
     return fit.enoughData
       ? `Enough data: your Curve Peak is known to within ±${percent(interval.halfWidth)}. You can stop here, or keep playing Sessions to narrow it further.`
       : `${sessions(counts.sessions)} so far. The interval is ±${percent(interval.halfWidth)} wide; there is enough data once it is narrower than ±${limit}.`
