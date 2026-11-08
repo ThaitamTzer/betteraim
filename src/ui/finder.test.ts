@@ -3,7 +3,8 @@ import { cm360For, coarseLevels, fitFinder, getGameProfile, nextSession } from '
 import { testRecord } from '../core/testing/records'
 import { syntheticPlayer, syntheticRuns } from '../core/testing/synthetic'
 import { fmt } from './format'
-import { centreOf, MIN_REST_SECONDS, newFinderSession, RAW_INPUT_BROWSERS, runLabel, runRoute, sessionEnd, stepView } from './finder'
+import { RAW_INPUT_BROWSERS, RAW_INPUT_CAVEAT } from '../input/pointer'
+import { centreOf, MIN_REST_SECONDS, newFinderSession, runLabel, runRoute, sessionEnd, stepView } from './finder'
 import type { FinderStep } from './finder'
 
 const settings = { gameProfileId: 'valorant', gameSensitivity: 0.4, dpi: 800 } as const
@@ -14,7 +15,7 @@ const session = (done = 0) => ({ ...newFinderSession(settings, 7, 'session-a', S
 /** After 8 coarse Sessions of a player whose optimum is 33 cm/360 the interval is under +-25%: the next Session is the fine phase. */
 const FINE = nextSession(fitFinder(syntheticRuns(syntheticPlayer({ optimum: 33 }), Array.from({ length: 8 }, () => ({ levels: coarseLevels(40) })), 1), { weights }), centreOf(settings))
 const fineSession = (done = 0) => ({ ...newFinderSession(settings, 7, 'session-f', FINE), done })
-const STEPS: FinderStep[] = ['rest', 'abandoned', 'notRaw', 'complete']
+const STEPS: FinderStep[] = ['rest', 'abandoned', 'notRaw']
 
 /** Every way a Sensitivity could be printed: full precision, the app's 4 significant digits, 1 and 2 decimals. */
 const spellings = (cm360: number) => [String(cm360), fmt(cm360), cm360.toFixed(1), cm360.toFixed(2)]
@@ -78,12 +79,6 @@ describe('progress', () => {
     expect(MIN_REST_SECONDS).toBeGreaterThanOrEqual(5)
   })
 
-  it('completes with the number of Runs played', () => {
-    const view = stepView(session(16), 'complete')
-    expect(view.heading).toBe('Session complete')
-    expect(view.lines.join(' ')).toContain('16 of 16')
-  })
-
   it('tells an abandoned Run from a quit: finished Runs stay saved', () => {
     const view = stepView(session(6), 'abandoned')
     expect(view.heading).toBe('Run abandoned')
@@ -96,6 +91,7 @@ describe('the raw input explanation', () => {
     const text = stepView(session(0), 'notRaw').lines.join(' ')
     for (const name of ['Chrome', 'Edge', 'Firefox', 'Safari']) expect(RAW_INPUT_BROWSERS).toContain(name)
     expect(text).toContain(RAW_INPUT_BROWSERS)
+    expect(text).toContain(RAW_INPUT_CAVEAT) // Firefox and Safari: the shown cm/360 may be scaled; Chromium is the verified path
     expect(text).toContain('Practice')
   })
 })

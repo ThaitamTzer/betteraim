@@ -1,4 +1,5 @@
 import type { Cm360 } from '../types'
+import { pointsTo } from './model'
 import type { FinderFit } from './model'
 import { coarseLevels } from './plan'
 
@@ -35,7 +36,7 @@ export interface NextSession {
 export function nextSession(fit: FinderFit, fallbackCentre: Cm360): NextSession {
   const coarse = (centre: Cm360, reason: NextReason): NextSession => ({ phase: 'coarse', centre, levels: coarseLevels(centre), reason })
   if (fit.reason === 'no-interior-peak' && fit.range) {
-    const higher = fit.curve.score.at(-1)! >= fit.curve.score[0]!
+    const higher = pointsTo(fit) === 'higher'
     return coarse(higher ? fit.range.max : fit.range.min, higher ? 'shift-higher' : 'shift-lower')
   }
   const { peak, interval } = fit

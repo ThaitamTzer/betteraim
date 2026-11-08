@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { aimDelta, angleBetween } from '../aim'
 import { exportData, importData } from '../exchange'
 import { replay, replaySteps } from '../run'
@@ -8,6 +8,9 @@ import type { Bot } from '../testing/bots'
 import { testMeta, testParams } from '../testing/params'
 import type { RunParams, RunRecord, RunState, TargetEvent } from '../types'
 import { getScenario } from './index'
+
+// Playing and scanning 30 s of 1 ms states is slow under a loaded machine (31 test files start at once): the default 5 s was flaky.
+vi.setConfig({ testTimeout: 30_000 })
 
 const sw = (overrides: Partial<RunParams> = {}) => testParams({ scenario: 'switch', ...overrides })
 const kills = (events: readonly TargetEvent[]) => events.filter((e) => e.kind === 'kill')
@@ -102,23 +105,30 @@ describe('Switch targets', () => {
   })
 
   it('are never close enough together to be on target at the same time', () => {
+    let closest = Infinity // one assertion on the extreme, not one `expect` per pair per millisecond
     for (const s of states) {
       for (const [i, a] of s.targets.entries()) {
-        for (const b of s.targets.slice(i + 1)) expect(angleBetween(a, b)).toBeGreaterThan(12)
+        for (const b of s.targets.slice(i + 1)) closest = Math.min(closest, angleBetween(a, b))
       }
     }
+    expect(closest).toBeGreaterThan(12)
   })
 
   it('drift slowly, and move smoothly', () => {
+    let fastest = 0
+    let largestStep = 0
+    let headingsInRange = true
     for (const [i, s] of states.entries()) {
       for (const t of s.targets) {
-        expect(t.speed).toBeLessThan(15)
-        expect(t.heading).toBeGreaterThanOrEqual(0)
-        expect(t.heading).toBeLessThan(360)
+        fastest = Math.max(fastest, t.speed ?? Infinity) // a Switch target always moves: a missing speed fails below
+        headingsInRange &&= t.heading !== undefined && t.heading >= 0 && t.heading < 360
         const before = states[i - 1]?.targets.find((x) => x.id === t.id)
-        if (before) expect(angleBetween(before, t)).toBeLessThan(0.05)
+        if (before) largestStep = Math.max(largestStep, angleBetween(before, t))
       }
     }
+    expect(fastest).toBeLessThan(15)
+    expect(headingsInRange).toBe(true)
+    expect(largestStep).toBeLessThan(0.05)
   })
 
   it('spawn three at the start, and a replacement the moment one falls, far from where it fell', () => {

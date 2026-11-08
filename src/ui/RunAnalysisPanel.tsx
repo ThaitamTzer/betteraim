@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { analyseRun } from '../core'
 import type { ClickingAnalysis, RunData, TrackingAnalysis } from '../core'
+import { aheadBehind } from './metrics'
 import './run-analysis.css'
 
 const percent = (share: number) => `${(share * 100).toFixed(0)}%`
@@ -41,9 +42,6 @@ const clickingRows = (a: ClickingAnalysis): Row[] => [
   },
 ]
 
-const leadValue = (a: TrackingAnalysis) =>
-  a.lead === 'level' ? 'Level' : `${Math.abs(a.meanOffset).toFixed(2)}° ${a.lead === 'ahead' ? 'Ahead' : 'Behind'}`
-
 const leadNote: Record<TrackingAnalysis['lead'], string> = {
   ahead: 'Your crosshair rode in front of the target, in the direction it was moving: you were leading it. Let the target come to your crosshair, or follow it closer.',
   behind: 'Your crosshair trailed behind the target, against the direction it was moving: you were chasing it. Start moving sooner and keep your hand moving with it.',
@@ -56,7 +54,7 @@ const trackingRows = (a: TrackingAnalysis): Row[] => [
     value: `${(a.timeOnTargetMs / 1000).toFixed(1)} s · ${percent(a.timeOnTargetShare)}`,
     note: 'How long you held fire with your crosshair on a target, and its share of the 30 s Run. It is what scores: Strafe is that share, a Switch target falls after 0.4 s of it.',
   },
-  { label: 'Ahead / Behind', value: leadValue(a), note: leadNote[a.lead] },
+  { label: 'Ahead / Behind', value: aheadBehind(a.meanOffset), note: leadNote[a.lead] },
   {
     label: 'Mouse speed',
     value: `${Math.round(a.mouseSpeed)}°/s`,

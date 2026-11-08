@@ -1,18 +1,11 @@
 import { cm360For, getGameProfile, getScenario, planSession, profileFov } from '../core'
 import type { Cm360, Fov, GameProfileId, NextSession, PlannedRun, RunRecord } from '../core'
+import { RAW_INPUT_BROWSERS, RAW_INPUT_CAVEAT } from '../input/pointer'
 import type { Route } from './routes'
 import type { Settings } from './settings'
 
 /** Rests make a Session about 10 minutes: 16 Runs of 30 s is 8, plus this wait before each of the 15 next Runs. */
 export const MIN_REST_SECONDS = 8
-
-/**
- * Where raw mouse input (Pointer Lock `unadjustedMovement`) works, from the pointer-lock research notes (2026-11-08,
- * MDN browser-compat-data). This replaces ADR-0001's older "Chromium only": Firefox 152 and Safari 18.4 added the option.
- * Firefox and Safari report `movementX/Y` in other units than Chrome; the Run's `env` records that for later correction.
- */
-export const RAW_INPUT_BROWSERS =
-  'Chrome, Edge and Opera 88 or newer on Windows, macOS or ChromeOS; Firefox 152 or newer on Windows or macOS; Safari 18.4 or newer. Linux is not supported yet.'
 
 /**
  * A Sensitivity Finder Session in progress. Lives in the route (memory only), so a reload ends it: the Runs finished so far
@@ -51,14 +44,14 @@ export function newFinderSession(settings: Settings, seed: number, id: string, n
 }
 
 /** Screens that sit between Runs (or end the Session). */
-export type FinderStep = 'rest' | 'abandoned' | 'notRaw' | 'complete'
+export type FinderStep = 'rest' | 'abandoned' | 'notRaw'
 
 /** "Run 5 of 16"; the first two are Warm-up Runs. Never the Sensitivity. */
 export const runLabel = ({ done, plan }: FinderSession): string => `Run ${done + 1} of ${plan.length}${plan[done]?.warmup ? ' (warm-up)' : ''}`
 
 /**
  * Where a finished Session goes: the Finder result screen. `last` is the Run that just ended; its save is still in flight, so
- * the screen waits for it (`saving`) before it reads the Runs and reports a failed save. (The `complete` step of `finderSession` is no longer reached.)
+ * the screen waits for it (`saving`) before it reads the Runs and reports a failed save.
  */
 export const sessionEnd = (session: FinderSession, last?: RunRecord): Route => ({
   name: 'finderResult',
@@ -129,10 +122,9 @@ export function stepView(session: FinderSession, step: FinderStep): StepView {
         lines: [
           'This browser captured the mouse with OS pointer acceleration, which would distort every Sensitivity. The unfinished Run was not recorded as a Finder Run.',
           `Raw input works in: ${RAW_INPUT_BROWSERS}`,
+          RAW_INPUT_CAVEAT,
           'Practice still works here, from Home.',
         ],
       }
-    case 'complete':
-      return { heading: 'Session complete', progress, lines: [`Runs completed: ${done} of ${plan.length}.`] }
   }
 }

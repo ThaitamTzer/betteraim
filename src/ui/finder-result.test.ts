@@ -49,6 +49,18 @@ describe('the Finder result text', () => {
     expect(withHalfWidth(0.0996, true)).toContain('within ±9.9%')
   })
 
+  it('says the interval reaches the edge of what was tested, even when it is narrower than +-10%', () => {
+    const base = fitOf(8)
+    const { min, max } = base.range!
+    for (const interval of [{ low: min * 0.97, high: min * 1.1, halfWidth: 0.06 }, { low: max * 0.9, high: max, halfWidth: 0.05 }]) {
+      const view = resultView({ ...base, enoughData: false, interval }, 'valorant', 800)
+      expect(view.enough).toBe(false)
+      expect(view.message).toMatch(/reaches the edge of the range you tested/)
+      expect(view.message).not.toMatch(/^Enough data/)
+    }
+    expect(resultView({ ...base, enoughData: false, interval: { low: 30, high: 36, halfWidth: 0.1 } }, 'valorant', 800).message).not.toMatch(/edge/)
+  })
+
   it('asks for another Session when one cannot give an interval', () => {
     expect(resultView(fitOf(1), 'valorant', 800).message).toBe('1 Session so far. Play at least one more Session to get a confidence interval.')
   })
@@ -123,7 +135,7 @@ describe('what the next Session will do', () => {
 describe('the Clicking and Tracking curves', () => {
   const disagree = syntheticPlayer({
     noise: 0.1,
-    scenarios: { ...syntheticPlayer().scenarios, flick: { level: 60, scale: 20, optimum: 30 }, strafe: { level: 55, scale: 12, optimum: 70 } },
+    scenarios: { ...syntheticPlayer().scenarios, flick: { baseline: 60, scale: 20, optimum: 30 }, strafe: { baseline: 55, scale: 12, optimum: 70 } },
   })
   const categories = (player: ReturnType<typeof syntheticPlayer>, sessions = 10) =>
     fitCategories(syntheticRuns(player, Array.from({ length: sessions }, () => ({ levels: coarseLevels(40) })), 3), { weights: WEIGHTS })
@@ -155,7 +167,7 @@ describe('the Clicking and Tracking curves', () => {
   })
 
   it('says when a category has no peak inside the tested range', () => {
-    const view = categoriesView(categories(syntheticPlayer({ optimum: 40, noise: 0.05, scenarios: { ...syntheticPlayer().scenarios, strafe: { level: 55, scale: 12, optimum: 300 } } }), 6))
+    const view = categoriesView(categories(syntheticPlayer({ optimum: 40, noise: 0.05, scenarios: { ...syntheticPlayer().scenarios, strafe: { baseline: 55, scale: 12, optimum: 300 } } }), 6))
     expect(view.categories[1]!.message).toMatch(/^Tracking: no peak inside the tested range yet.*higher cm\/360/)
     expect(view.difference).toBeNull()
   })

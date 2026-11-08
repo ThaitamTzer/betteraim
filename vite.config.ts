@@ -14,6 +14,8 @@ const cspMeta: Plugin = {
 export default defineConfig({
   base: '/betteraim/',
   plugins: [react(), cspMeta],
-  build: { chunkSizeWarningLimit: 900 }, // three.js alone is ~700 kB, uPlot adds ~50 kB; the app is a small screen shell
+  // The Run screen (and with it Three.js, whose WebGLRenderer alone is ~500 kB and cannot be tree-shaken further) is a lazy chunk of ~542 kB; the app shell and the
+  // Anthropic SDK chunk are under 400 kB. 550 is the smallest round value above the Run chunk: a bigger one means something new has joined it.
+  build: { chunkSizeWarningLimit: 550 },
   test: { include: ['src/**/*.test.ts'] },
 })

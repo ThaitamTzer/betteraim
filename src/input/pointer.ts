@@ -1,5 +1,24 @@
 /** Raw mouse input for the app shell. Everything here is DOM; the core only ever sees the timestamped result. */
 
+
+/**
+ * Where raw mouse input (Pointer Lock `unadjustedMovement`) works, from docs/research/pointer-lock-raw-input.md (2026-11-08,
+ * MDN browser-compat-data), as ADR-0001 now says: Firefox 152 and Safari 18.4 added the option to Chromium's.
+ * Firefox and Safari report `movementX/Y` in other units than Chrome; the Run's `env` records that for later correction.
+ */
+export const RAW_INPUT_BROWSERS =
+  'Chrome, Edge and Opera 88 or newer on Windows, macOS or ChromeOS; Firefox 152 or newer on Windows or macOS; Safari 18.4 or newer. Linux is not supported yet.'
+
+/**
+ * What the Finder says to players of other browsers than Chromium. Firefox and Safari report `movementX/Y` in other units (CSS pixels, scaled by
+ * zoom and display scale, in the research note), so their raw counts are less verified: a cm/360 shown there may be scaled. Copy only, no gating.
+ */
+export const RAW_INPUT_CAVEAT =
+  'Chrome, Edge and Opera are the verified path. In Firefox and Safari the mouse counts are less well verified (the browser may scale them), so the cm/360 and Game Sensitivity shown there may be scaled.'
+
+/** Chrome, Edge and Opera say `Chrome/` (Edge `Edg/`, Opera `OPR/`) in their user agent; Firefox and Safari do not. Only picks which copy to show. */
+export const isChromium = (userAgent: string): boolean => /(?:Chrome|Chromium|Edg|OPR)\//.test(userAgent) // also matches HeadlessChrome/
+
 /** Chromium and Firefox 148+ expose `pointerrawupdate`; Safari does not but may still give raw movement. Only an early hint. */
 export const rawInputLikelySupported = (): boolean => 'onpointerrawupdate' in window
 

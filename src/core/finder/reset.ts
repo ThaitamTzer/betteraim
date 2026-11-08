@@ -1,3 +1,4 @@
+import type { GameProfileId } from '../game-profiles'
 import type { RunStore, RunSummary } from '../storage'
 
 /**
@@ -13,7 +14,7 @@ import type { RunStore, RunSummary } from '../storage'
  */
 export async function finderRunsFor(
   store: RunStore,
-  gameProfileId: string,
+  gameProfileId: GameProfileId,
 ): Promise<{ runs: RunSummary[]; exclude: (run: RunSummary) => boolean; resetAt: number | undefined }> {
   const resetAt = (await store.finderResets())[gameProfileId]
   return { runs: await store.list({ gameProfileId, mode: 'finder' }), exclude: (run) => resetAt !== undefined && run.startedAt < resetAt, resetAt }

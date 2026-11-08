@@ -101,7 +101,7 @@ describe('per-category curves', () => {
   const player = syntheticPlayer({
     optimum: 40,
     noise: 0.1,
-    scenarios: { ...syntheticPlayer().scenarios, flick: { level: 60, scale: 20, optimum: 30 }, strafe: { level: 55, scale: 12, optimum: 60 } },
+    scenarios: { ...syntheticPlayer().scenarios, flick: { baseline: 60, scale: 20, optimum: 30 }, strafe: { baseline: 55, scale: 12, optimum: 60 } },
   })
   const both = syntheticRuns(player, coarse(10), 3)
 

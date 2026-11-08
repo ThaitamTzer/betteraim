@@ -7,7 +7,7 @@ import type { Cm360, ScenarioId } from '../types'
  * Synthetic players for the Sensitivity Finder fit (tests only): Finder Session Runs as `RunSummary` records, made without
  * the Scenario engine. A Score is a known function of Sensitivity plus the nuisances the fit has to survive:
  *
- *   score = level + scale * ( -curvature * ln(sensitivity / optimum)^2   the true Performance Curve, a parabola in log-Sensitivity
+ *   score = baseline + scale * ( -curvature * ln(sensitivity / optimum)^2   the true Performance Curve, a parabola in log-Sensitivity
  *                             + trend * (Runs played so far in the Session)   learning
  *                             + form                                      one draw per (Session, Scenario) pair: the day's form
  *                             + noise )                                   one draw per Run
@@ -17,7 +17,7 @@ import type { Cm360, ScenarioId } from '../types'
 
 export interface SyntheticScenario {
   /** Score at the optimum before form, trend and noise. */
-  level: number
+  baseline: number
   /** The size of one unit in the formula above (the Score's own unit, so Scenarios can differ by orders of magnitude). */
   scale: number
   /** This Scenario's own best Sensitivity; the player's `optimum` when absent. */
@@ -46,10 +46,10 @@ export const syntheticPlayer = (overrides: Partial<SyntheticPlayer> = {}): Synth
   form: 0.3,
   warmupPenalty: 1.5,
   scenarios: {
-    flick: { level: 60, scale: 20 },
-    micro: { level: 45, scale: 15 },
-    strafe: { level: 55, scale: 12 },
-    switch: { level: 30, scale: 8 },
+    flick: { baseline: 60, scale: 20 },
+    micro: { baseline: 45, scale: 15 },
+    strafe: { baseline: 55, scale: 12 },
+    switch: { baseline: 30, scale: 8 },
   },
   ...overrides,
 })
@@ -90,7 +90,7 @@ export function syntheticRuns(player: SyntheticPlayer, sessions: readonly Synthe
     const warmups = scenarioIds.slice(0, 2).map((scenario) => ({ scenario, sensitivity: centre, warmup: true }))
     const played = [...warmups, ...counted.slice(0, spec.abandonAfter ?? counted.length)]
     return played.map(({ scenario, sensitivity, warmup }, order): RunSummary => {
-      const { level, scale, optimum = player.optimum } = player.scenarios[scenario]
+      const { baseline, scale, optimum = player.optimum } = player.scenarios[scenario]
       const z = Math.log(sensitivity / optimum)
       const unit = -player.curvature * z * z + player.trend * order + form[scenario]! + player.noise * gauss(rng) - (warmup ? player.warmupPenalty : 0)
       return {
@@ -106,7 +106,7 @@ export function syntheticRuns(player: SyntheticPlayer, sessions: readonly Synthe
         sensitivity,
         dpi: 800,
         fov: { degrees: 70.5, axis: 'vertical' },
-        score: level + scale * unit,
+        score: baseline + scale * unit,
       }
     })
   })

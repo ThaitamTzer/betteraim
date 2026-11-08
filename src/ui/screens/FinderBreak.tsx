@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { getScenario } from '../../core'
+import { errorMessage } from '../../error-message'
 import { saveOutcome } from '../../storage/runs'
 import { MIN_REST_SECONDS, runRoute, stepView } from '../finder'
 import type { ScreenProps } from '../routes'
@@ -7,7 +8,7 @@ import { formatScore } from '../score'
 import '../finder.css'
 
 /**
- * Every screen between the Runs of a Finder Session (rest, abandoned Run, no raw input, complete). It prints only
+ * Every screen between the Runs of a Finder Session (rest, abandoned Run, no raw input). It prints only
  * `stepView` and the last Score, never a Sensitivity, and the topbar is hidden while it shows (App.tsx).
  */
 export function FinderBreak({ route, go }: ScreenProps<'finderSession'>) {
@@ -28,7 +29,7 @@ export function FinderBreak({ route, go }: ScreenProps<'finderSession'>) {
   }, [waiting])
   // A Finder Run has no result screen, so a failed save has to be reported here.
   useEffect(() => {
-    if (last) saveOutcome(last.id)?.catch((error: unknown) => setSaveError(error instanceof Error ? error.message : String(error)))
+    if (last) saveOutcome(last.id)?.catch((error: unknown) => setSaveError(errorMessage(error)))
   }, [last])
 
   const home = () => go({ name: 'home' })
@@ -81,7 +82,7 @@ export function FinderBreak({ route, go }: ScreenProps<'finderSession'>) {
             </button>
           </>
         )}
-        {(step === 'notRaw' || step === 'complete') && (
+        {step === 'notRaw' && (
           <button type="button" className="primary" ref={primary} onClick={home}>
             Back to Home
           </button>

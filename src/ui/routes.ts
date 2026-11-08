@@ -19,7 +19,7 @@ export type Route =
    * Scenario picker; a chosen Scenario is played as a Practice Run with these settings (from the active Game Profile).
    * `sessionId` is the Practice Session to carry on; the picker makes a new one when it is absent (it opens from Home).
    */
-  | { name: 'practice'; sensitivity: number; dpi: number; fov: Fov; gameProfileId: string; sessionId?: string }
+  | { name: 'practice'; sensitivity: number; dpi: number; fov: Fov; gameProfileId: GameProfileId; sessionId?: string }
   | {
       name: 'run'
       params: RunParams

@@ -1,19 +1,27 @@
 import { useState } from 'react'
-import { byDay, getScenario, scenarios } from '../../core'
-import type { AnalysedRun, ScenarioId } from '../../core'
+import { byDay, getGameProfile, getScenario, scenarios } from '../../core'
+import type { AnalysedRun, RunMode, ScenarioId } from '../../core'
 import { Chart } from '../Chart'
 import { Select } from '../fields'
 import { localDay } from '../format'
 import { metrics } from '../metrics'
 import type { ScreenProps } from '../routes'
+import { historyRuns } from '../runs-view'
+import { loadSettings } from '../settings'
 import { useAnalysed } from '../useAnalysed'
 import '../summary.css'
 
 // Which metrics share a chart: the two rates are on one scale and read best together.
 const chartGroups = [['accuracy'], ['overshootRate', 'undershootRate'], ['pathDeviation'], ['smoothness'], ['timeOnTarget'], ['aheadBehind']]
 
+const MODES = [
+  ['practice', 'Practice'],
+  ['finder', 'Finder'],
+] as const
+
 export function History({ go }: ScreenProps<'history'>) {
   const loaded = useAnalysed()
+  const [mode, setMode] = useState<RunMode>('practice')
   if (!loaded) return <main className="page wide"><p className="lede">Analysing your Runs. This can take a few seconds the first time.</p></main>
   if ('error' in loaded) {
     return (
@@ -22,8 +30,7 @@ export function History({ go }: ScreenProps<'history'>) {
       </main>
     )
   }
-  const played = loaded.items.filter((i) => !i.run.warmup)
-  if (played.length === 0) {
+  if (loaded.items.every((i) => i.run.warmup)) {
     return (
       <main className="page wide">
         <p className="eyebrow">History</p>
@@ -35,7 +42,34 @@ export function History({ go }: ScreenProps<'history'>) {
       </main>
     )
   }
-  return <Charts items={loaded.items} latest={played.at(-1)!.run.scenario} />
+  const gameProfileId = loadSettings()?.gameProfileId
+  const items = historyRuns(loaded.items, mode, gameProfileId)
+  const played = items.filter((i) => !i.run.warmup)
+  const game = gameProfileId === undefined ? 'any game' : getGameProfile(gameProfileId).name
+  return (
+    <main className="page wide">
+      <p className="eyebrow">History</p>
+      <h1>Your progress by day</h1>
+      <p className="lede">
+        Each point pools all the Runs of one day, for {game}. Warm-up Runs are not counted, and a day without a value (no shots, no hits) is
+        skipped.
+      </p>
+      <div className="setup">
+        <Select label="Runs" value={mode} choices={MODES} onChange={setMode} />
+      </div>
+      {mode === 'finder' && (
+        <p className="hint">Finder Runs are played at different Sensitivities, hidden from you, so these charts mix them: they are not a trend of your aim.</p>
+      )}
+      {played.length === 0 ? (
+        <p className="lede">
+          No {mode === 'finder' ? 'Finder' : 'Practice'} Runs in {game} yet.{' '}
+          <button type="button" className="link" onClick={() => go({ name: mode === 'finder' ? 'finder' : 'home' })}>Play one</button>
+        </p>
+      ) : (
+        <Charts key={mode} items={items} latest={played.at(-1)!.run.scenario} />
+      )}
+    </main>
+  )
 }
 
 function Charts({ items, latest }: { items: AnalysedRun[]; latest: ScenarioId }) {
@@ -57,13 +91,7 @@ function Charts({ items, latest }: { items: AnalysedRun[]; latest: ScenarioId })
     .filter(({ series }) => series.some((s) => s.values.some((v) => v !== null)))
 
   return (
-    <main className="page wide">
-      <p className="eyebrow">History</p>
-      <h1>Your progress by day</h1>
-      <p className="lede">
-        Each point pools all the Runs of one day. Warm-up Runs are not counted, and a day without a value (no shots, no hits) is
-        skipped.
-      </p>
+    <>
       <div className="setup">
         <Select
           label="Scenario"
@@ -92,6 +120,6 @@ function Charts({ items, latest }: { items: AnalysedRun[]; latest: ScenarioId })
           <Chart x={x} series={series} formatX={formatX} xLabel="Day" description={`${name} ${group.map((m) => m.label).join(' and ')} per day`} />
         </section>
       ))}
-    </main>
+    </>
   )
 }

@@ -82,6 +82,18 @@ describe('the AI Coach picks inside the interval', () => {
     expect(intervalCm360.high).toBeCloseTo(interval(input.fit).high, 1)
   })
 
+  it('never offers a Sensitivity beyond what was tested, even when the interval reaches past it', async () => {
+    const base = setup(runsOf(5))
+    const { min, max } = base.fit.range!
+    const wide = { ...base.fit, interval: { low: min * 0.5, high: max * 2, halfWidth: 1 } }
+    const { provider, requests } = fakeProvider(coachAnswer(min * 0.8), coachAnswer(max * 1.5))
+    const result = await recommendSensitivity({ provider, ...base, fit: wide })
+    const { intervalCm360 } = figures(requests[0]!)
+    expect(intervalCm360.low).toBeGreaterThanOrEqual(min)
+    expect(intervalCm360.high).toBeLessThanOrEqual(max)
+    expect(result).toMatchObject({ source: 'curve-peak', recommended: base.fit.peak }) // both answers were outside the tested range
+  })
+
   it('keeps at most a few short reasons', async () => {
     const input = setup(runsOf(5))
     const long = 'x'.repeat(2000)

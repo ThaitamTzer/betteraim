@@ -2,6 +2,7 @@ import { aggregateRuns, getScenario } from '../../core'
 import { formatMeanScore, metrics } from '../metrics'
 import { PracticeAdvice } from '../PracticeAdvice'
 import type { ScreenProps } from '../routes'
+import { sensitivityText } from '../runs-view'
 import { formatScore } from '../score'
 import { useAnalysed } from '../useAnalysed'
 import '../summary.css'
@@ -116,7 +117,7 @@ export function SessionSummary({ route, go }: ScreenProps<'session'>) {
                 <td>{new Date(run.startedAt).toLocaleTimeString()}</td>
                 <td>{getScenario(run.scenario).name}</td>
                 <td>{formatScore(run.scenario, run.score)}</td>
-                <td>{run.sensitivity} cm/360</td>
+                <td>{sensitivityText(run)}</td>
                 <td>{run.warmup && <span className="tag">Warm-up, not counted</span>}</td>
               </tr>
             ))}

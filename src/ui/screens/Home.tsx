@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { cm360For, degreesPerCount, eDpi, getGameProfile, practiceFov } from '../../core'
-import { rawInputLikelySupported } from '../../input/pointer'
-import { RAW_INPUT_BROWSERS } from '../finder'
+import { RAW_INPUT_BROWSERS, rawInputLikelySupported } from '../../input/pointer'
 import { fmt } from '../format'
 import type { ScreenProps } from '../routes'
 import { loadPreferences } from '../preferences'
@@ -21,7 +20,7 @@ export function Home({ go }: ScreenProps<'home'>) {
 
   return (
     <main className="page">
-      <h1>Find the sensitivity you aim best with.</h1>
+      <h1>Find the Sensitivity you aim best with.</h1>
       <p className="lede">
         A free aim trainer in your browser. Practice a Scenario with your {game.name} setup and see your Score.
       </p>

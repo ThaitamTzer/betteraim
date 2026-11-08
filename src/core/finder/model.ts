@@ -16,7 +16,7 @@ import type { Cm360, ScenarioCategory, ScenarioId } from '../types'
  * 3. Weights: every Run counts (its category's target share) / (that category's actual share of the fitted Runs), once.
  *    Scenarios are already drawn by these weights, so using them as they are would double-count (70/30 would become 84/16).
  * 4. Curve Peak: the vertex of the quadratic, in cm/360, if it is a maximum inside the tested range.
- * 5. Interval: percentile bootstrap over Sessions (5th to 95th percentile), stretched for few Sessions (see `stretch`). Resampling a
+ * 5. Interval: percentile bootstrap over Sessions (5th to 95th percentile), stretched for few Sessions (see `stretch`; ADR-0004). Resampling a
  *    Session takes all of its pairs, and the whole pipeline (spread, weights, fit) is redone on each resample. A resample's peak
  *    that is not an interior maximum counts as the edge of the tested range it points to, so a fit that cannot find its peak
  *    widens the interval instead of being skipped. The seed comes from the Runs, so the same data gives the same interval.
@@ -57,9 +57,9 @@ export interface FinderFit {
   /** The Curve Peak in cm/360, or null (then `reason` says why). */
   peak: Cm360 | null
   reason: FitReason | null
-  /** Bootstrap interval of the peak (central `INTERVAL_LEVEL`), clamped to `range`. `halfWidth` = (high - low) / 2 / peak. Null without a peak or with fewer than 2 Sessions. */
+  /** Bootstrap interval of the peak (central `INTERVAL_LEVEL`). It is NOT clamped to `range`: one that reaches or leaves the edge of what was tested is not "enough data". `halfWidth` = (high - low) / 2 / peak. Null without a peak or with fewer than 2 Sessions. */
   interval: { low: Cm360; high: Cm360; halfWidth: number } | null
-  /** The interval is narrower than +-10% of the peak. */
+  /** The interval is narrower than +-10% of the peak AND lies strictly inside `range` (an interval that touches or leaves the tested range says nothing yet about where the peak really is). */
   enoughData: boolean
   /** The tested Sensitivities: lowest and highest of the fitted Runs. Null when nothing was fitted. */
   range: { min: Cm360; max: Cm360 } | null
@@ -86,6 +86,9 @@ export interface FinderFit {
     excluded: { warmup: number; practice: number; filtered: number; incompletePair: number }
   }
 }
+
+/** The end of the tested range a fit with no interior peak points to: where its curve is higher. The next Session moves its Centre that way. */
+export const pointsTo = (fit: FinderFit): 'higher' | 'lower' => (fit.curve.score.at(-1)! >= fit.curve.score[0]! ? 'higher' : 'lower')
 
 /**
  * The Sensitivity to recommend: the AI Coach's choice (`coach.recommended`, see `recommendSensitivity`) when it came from the AI Coach
@@ -362,9 +365,10 @@ export function fitFinder(runs: readonly RunSummary[], options: FitOptions): Fin
   tops.sort((x, y) => x - y)
   const edge = (1 - INTERVAL_LEVEL) / 2
   const k = stretch(sessions)
-  const bound = (p: number): number => Math.exp(centre + halfRange * Math.max(-1, Math.min(1, found.u + k * (quantile(tops, p) - found.u))))
+  // Not clamped to the range: a peak near an edge must read as an interval that reaches it, not as a narrow one.
+  const bound = (p: number): number => Math.exp(centre + halfRange * (found.u + k * (quantile(tops, p) - found.u)))
   const low = Math.min(peak, bound(edge))
   const high = Math.max(peak, bound(1 - edge))
   const halfWidth = (high - low) / 2 / peak
-  return { ...base, peak, reason: null, interval: { low, high, halfWidth }, enoughData: halfWidth < ENOUGH_HALF_WIDTH }
+  return { ...base, peak, reason: null, interval: { low, high, halfWidth }, enoughData: halfWidth < ENOUGH_HALF_WIDTH && low > range.min && high < range.max }
 }

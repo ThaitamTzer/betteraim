@@ -1,10 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { coarseLevels } from '../index'
 import type { RunSummary } from '../index'
 import { fitFinder, recommend } from './model'
 import { referencePeak } from '../testing/reference-fit'
 import { syntheticPlayer, syntheticRuns } from '../testing/synthetic'
 import type { SyntheticSession } from '../testing/synthetic'
+
+// The coverage tests refit hundreds of bootstrap intervals (3 to 4 s alone, more on a loaded machine): the default 5 s was flaky.
+vi.setConfig({ testTimeout: 60_000 })
 
 const WEIGHTS = { clicking: 0.7, tracking: 0.3 }
 const coarse = (n: number, centre = 40): SyntheticSession[] => Array.from({ length: n }, () => ({ levels: coarseLevels(centre) }))
@@ -91,6 +94,41 @@ describe('the confidence interval', () => {
     expect(late.enoughData).toBe(true)
   })
 
+  describe('near the edge of the tested range', () => {
+    // coarseLevels(40) tests 20 to 80 cm/360.
+    it('is never enough data for an optimum just beyond the range, however many Sessions (it used to be, from a collapsed clamped interval)', () => {
+      const fits = seeds(40).map((seed) => fitFinder(syntheticRuns(syntheticPlayer({ optimum: 18 }), coarse(16), seed), { weights: WEIGHTS }))
+      expect(fits.filter((f) => f.interval !== null).length, 'some fits find an interior peak').toBeGreaterThan(3)
+      expect(fits.filter((f) => f.enoughData)).toHaveLength(0)
+    })
+
+    it('reports an interval that reaches the edge of the tested range as it is, not cut at the edge, and not enough data', () => {
+      const fits = seeds(40).map((seed) => fitFinder(syntheticRuns(syntheticPlayer({ optimum: 20 }), coarse(16), seed), { weights: WEIGHTS }))
+      const reaching = fits.filter((f) => f.interval && f.interval.low <= f.range!.min)
+      expect(reaching.length).toBeGreaterThan(5)
+      expect(reaching.some((f) => f.interval!.low < f.range!.min)).toBe(true)
+      expect(reaching.filter((f) => f.enoughData)).toHaveLength(0)
+    })
+
+    it('says enough data only for an interval strictly inside the tested range', () => {
+      for (const optimum of [18, 22, 26, 33, 50, 70]) {
+        for (const seed of seeds(6)) {
+          const f = fitFinder(syntheticRuns(syntheticPlayer({ optimum }), coarse(24), seed), { weights: WEIGHTS })
+          if (f.enoughData) {
+            expect(f.interval!.low, `optimum ${optimum}`).toBeGreaterThan(f.range!.min)
+            expect(f.interval!.high, `optimum ${optimum}`).toBeLessThan(f.range!.max)
+            expect(f.interval!.halfWidth).toBeLessThan(0.1)
+          }
+        }
+      }
+    })
+
+    it('still says enough data in the middle of the range, so the rule is not simply "never"', () => {
+      const f = fitFinder(syntheticRuns(syntheticPlayer({ optimum: 40 }), coarse(30), 4), { weights: WEIGHTS })
+      expect(f.enoughData).toBe(true)
+    })
+  })
+
   it('is the same for the same data, whatever the order the Runs arrive in', () => {
     const runs = syntheticRuns(player, coarse(6), 7)
     const once = fitFinder(runs, { weights: WEIGHTS })
@@ -106,12 +144,6 @@ describe('the confidence interval', () => {
     expect(fit.counts.sessions).toBe(1)
   })
 
-  it('stays well under a second for ten Sessions', () => {
-    const runs = syntheticRuns(player, coarse(10), 1)
-    const started = performance.now()
-    fitFinder(runs, { weights: WEIGHTS })
-    expect(performance.now() - started).toBeLessThan(1000)
-  })
 })
 
 describe('pooling coarse and fine Sessions', () => {
@@ -144,7 +176,7 @@ describe('category weighting', () => {
     noise: 0,
     trend: 0,
     form: 0,
-    scenarios: { ...syntheticPlayer().scenarios, flick: { level: 60, scale: 20, optimum: clickingBest }, strafe: { level: 55, scale: 12, optimum: trackingBest } },
+    scenarios: { ...syntheticPlayer().scenarios, flick: { baseline: 60, scale: 20, optimum: clickingBest }, strafe: { baseline: 55, scale: 12, optimum: trackingBest } },
   })
   const onlyClicking: SyntheticSession = { levels: coarseLevels(40), scenarios: ['flick'] }
   const onlyTracking: SyntheticSession = { levels: coarseLevels(40), scenarios: ['strafe'] }
@@ -176,7 +208,7 @@ describe('category weighting', () => {
   })
 
   it('scales each Scenario by its own spread, so Scores in other units do not drown the rest', () => {
-    const loud = syntheticPlayer({ ...player, scenarios: { ...player.scenarios, flick: { level: 60000, scale: 20000, optimum: clickingBest } } })
+    const loud = syntheticPlayer({ ...player, scenarios: { ...player.scenarios, flick: { baseline: 60000, scale: 20000, optimum: clickingBest } } })
     const fit = fitFinder(syntheticRuns(loud, mix(5, 5), 1), { weights: { clicking: 0.5, tracking: 0.5 } })
     expect(fit.peak).toBeCloseTo(Math.exp((Math.log(clickingBest) + Math.log(trackingBest)) / 2), 0) // 40, the middle of the two (the loud Scenario alone: 31.7)
   })

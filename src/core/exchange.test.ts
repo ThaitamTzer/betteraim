@@ -63,7 +63,7 @@ describe('exporting and importing', () => {
 
     it('are validated before anything is written: a bad marker rejects the whole file', async () => {
       const good = JSON.parse(await exportData(await resetStore()))
-      for (const bad of [[], 'now', { valorant: 'yesterday' }, { valorant: null }, { valorant: [1] }]) {
+      for (const bad of [[], 'now', { valorant: 'yesterday' }, { valorant: null }, { valorant: [1] }, { quake: 5 }, { constructor: 5 }]) {
         const target = await storeWith([testRecord({ seed: 5 }, { id: 'keep', startedAt: 10 })])
         await target.resetFinder('cs2', 50)
         await expect(importData(target, JSON.stringify({ ...good, finderResets: bad }))).rejects.toThrow(ImportError)
@@ -73,12 +73,54 @@ describe('exporting and importing', () => {
     })
   })
 
+  describe("the player's setup", () => {
+    // Opaque to the core: Settings, Preferences and Player Context as the shell keeps them. The AI Coach's settings are not in it.
+    const player = { settings: { gameProfileId: 'cs2', gameSensitivity: 1.2, dpi: 1600 }, preferences: { targetColor: '#ff0000' }, playerContext: { role: 'entry' } }
+
+    it('travels in the same file: a round trip hands the record back unchanged, beside the Runs', async () => {
+      const file = await exportData(await storeWith(records()), player)
+      expect(JSON.parse(file)).toMatchObject({ format: 'betteraim-export', version: 1, player })
+      const copy = createMemoryStore()
+      expect(await importData(copy, file)).toEqual({ runs: 4, player })
+      expect(await everything(copy)).toEqual(records())
+      expect(await exportData(copy, player)).toBe(file)
+    })
+
+    it('is left out when there is none, and a file without it (every file written before) imports with none', async () => {
+      const file = await exportData(await storeWith(records()))
+      expect(JSON.parse(file)).not.toHaveProperty('player')
+      expect(await importData(createMemoryStore(), file)).toEqual({ runs: 4, player: undefined })
+    })
+
+    it('is checked by the shell before anything is written, and what it returns is what comes back', async () => {
+      const file = await exportData(await storeWith(records()), player)
+      const target = await storeWith([testRecord({ seed: 5 }, { id: 'keep', startedAt: 10 })])
+      const refuse = () => {
+        throw new ImportError('The setup is not valid.')
+      }
+      await expect(importData(target, file, refuse)).rejects.toThrow('The setup is not valid.')
+      expect((await target.list()).map((r) => r.id)).toEqual(['keep'])
+      expect(await target.finderResets()).toEqual({})
+      const cleaned = await importData(target, file, () => ({ settings: { dpi: 800 } }))
+      expect(cleaned.player).toEqual({ settings: { dpi: 800 } })
+    })
+
+    it('rejects a file whose player record is not an object, leaving existing data untouched', async () => {
+      const good = JSON.parse(await exportData(await storeWith(records()), player))
+      for (const bad of [[], 'cs2', 7, null, true]) {
+        const target = await storeWith([testRecord({ seed: 5 }, { id: 'keep', startedAt: 10 })])
+        await expect(importData(target, JSON.stringify({ ...good, player: bad }))).rejects.toThrow(ImportError)
+        expect((await target.list()).map((r) => r.id)).toEqual(['keep'])
+      }
+    })
+  })
+
   it('a round trip into an empty store yields identical data', async () => {
     const original = records()
     const file = await exportData(await storeWith(original))
 
     const copy = createMemoryStore()
-    expect(await importData(copy, file)).toBe(4)
+    expect((await importData(copy, file)).runs).toBe(4)
 
     expect(await everything(copy)).toEqual(original)
     expect(await copy.list()).toEqual(await (await storeWith(original)).list())
@@ -117,6 +159,7 @@ describe('exporting and importing', () => {
       'a missing version': ({ version, ...f }) => (void version, stringify(f)),
       'runs that is not a list': (f) => stringify({ ...f, runs: {} }),
       'an unknown Scenario': (f) => stringify({ ...f, runs: [{ ...f.runs[0], scenario: 'nope' }, ...f.runs.slice(1)] }),
+      'an unknown Game Profile': (f) => stringify({ ...f, runs: [{ ...f.runs[0], gameProfileId: 'quake' }, ...f.runs.slice(1)] }),
       'an unknown mode': (f) => stringify({ ...f, runs: [{ ...f.runs[0], mode: 'ranked' }, ...f.runs.slice(1)] }),
       'a non-numeric Score': (f) => stringify({ ...f, runs: [{ ...f.runs[0], score: '9' }, ...f.runs.slice(1)] }),
       'a capture environment that is not an object': (f) => stringify({ ...f, runs: [{ ...f.runs[0], env: 'Chrome' }, ...f.runs.slice(1)] }),

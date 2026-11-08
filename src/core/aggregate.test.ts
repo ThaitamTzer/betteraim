@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { aimDelta, aggregateRuns, analyseRun, byDay, bySession, createMemoryStore, leadOf, loadAnalysed, loadAnalysedRuns, tallyShots } from './index'
+import { aimDelta, aggregateRuns, analyseRun, byDay, createMemoryStore, groupRuns, leadOf, loadAnalysed, loadAnalysedRuns, tallyShots } from './index'
 import type { AnalysedRun, ClickingAnalysis, Metrics, TrackingAnalysis } from './index'
 import { aimBot, missBot, trackBot } from './testing/bots'
 import type { Bot } from './testing/bots'
 import { testRecord } from './testing/records'
+
+/** One group per Session; Runs saved before Sessions existed share one group with key `undefined`. */
+const bySession = (items: Parameters<typeof groupRuns>[0]) => groupRuns(items, (i) => i.run.sessionId)
 
 const HOUR = 3_600_000
 const clicking = (a: AnalysedRun['analysis']): ClickingAnalysis => {

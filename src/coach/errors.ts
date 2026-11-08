@@ -1,4 +1,5 @@
 import { CoachError } from '../core'
+import { errorMessage } from '../error-message'
 
 /** localhost and 127.0.0.1 only: they are the http hosts the Content Security Policy lets through (see vite.config.ts). */
 export const isLocalUrl = (url: string): boolean => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(url)
@@ -27,7 +28,7 @@ async function loopbackBlocked(): Promise<boolean> {
 
 /** The text to show for whatever a request threw, with the one extra hint only the browser can tell: a blocked permission. */
 export async function failureMessage(error: unknown, localServer: boolean): Promise<string> {
-  if (!(error instanceof CoachError)) return `Something unexpected went wrong: ${error instanceof Error ? error.message : String(error)}`
+  if (!(error instanceof CoachError)) return `Something unexpected went wrong: ${errorMessage(error)}`
   if (error.kind === 'network' && localServer && (await loopbackBlocked())) {
     return `${error.message} Chrome shows this site is blocked from reaching apps on your device: click the lock icon in the address bar, open Site settings, set Loopback network (also called Apps on device) to Allow, then reload.`
   }

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { failureMessage, isLocalUrl } from '../coach/errors'
-import { createCoachProvider, loadCoachSettings, missingSetup, normalizeBaseUrl } from '../coach/settings'
+import { coachFailureMessage, createCoachProvider, loadCoachSettings, missingSetup } from '../coach/settings'
 import { practiceAdvice } from '../core'
 import type { AnalysedRun } from '../core'
 import './coach.css'
@@ -24,7 +23,7 @@ export function PracticeAdvice({ items, onSetup, children }: { items: readonly A
     try {
       setState({ phase: 'done', text: await practiceAdvice(provider, { items, language: settings.language }) })
     } catch (error) {
-      setState({ phase: 'failed', message: await failureMessage(error, settings.provider === 'openai' && isLocalUrl(normalizeBaseUrl(settings.openai.baseUrl))) })
+      setState({ phase: 'failed', message: await coachFailureMessage(error, settings) })
     }
   }
 

@@ -12,7 +12,7 @@ export const testParams = (overrides: Partial<RunParams> = {}): RunParams => ({
 export const testMeta = (overrides: Partial<RunMeta> = {}): RunMeta => ({
   id: 'run-1',
   startedAt: 0,
-  gameProfileId: 'test',
+  gameProfileId: 'valorant',
   mode: 'practice',
   warmup: false,
   sessionId: 'session-1',

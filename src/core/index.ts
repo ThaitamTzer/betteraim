@@ -1,6 +1,6 @@
 // Public surface of the headless core. The render and UI layers import from here only.
 export { aimDelta, angleBetween, degreesPerCount, directionOf, offsetAim, verticalFovDeg, wrapDeg } from './aim'
-export { aggregateRuns, byDay, bySession, groupRuns, loadAnalysed, loadAnalysedRuns } from './aggregate'
+export { aggregateRuns, byDay, groupRuns, loadAnalysed, loadAnalysedRuns } from './aggregate'
 export type { AnalysedRun, Aggregate, ClickingMetrics, Metrics, RunGroup, ScenarioAggregate, TrackingMetrics } from './aggregate'
 export { analyseRun, leadOf } from './analysis'
 export type { AimMovement, ClickingAnalysis, Lead, Outcome, RunAnalysis, RunData, TrackingAnalysis } from './analysis'
@@ -36,11 +36,22 @@ export type {
 } from './coach'
 export { decodeInput, decodeTargetEvents, encodeInput, encodeTargetEvents, fromBase64, toBase64 } from './codec'
 export { EXPORT_FORMAT, EXPORT_VERSION, exportData, ImportError, importData, parseExport } from './exchange'
-export { coarseLevels, ENOUGH_HALF_WIDTH, fitFinder, INTERVAL_LEVEL, planSession, recommend } from './finder'
-export type { FinderFit, FitOptions, FitReason, PlannedRun } from './finder'
-// Finder phases, Reset Finder and per-category curves (#11)
-export { finderRunsFor, fitCategories, FINE_HALF_WIDTH, FINE_SPREAD, nextSession } from './finder'
-export type { NextReason, NextSession } from './finder'
+export type { ImportResult, PlayerData } from './exchange'
+export {
+  coarseLevels,
+  ENOUGH_HALF_WIDTH,
+  finderRunsFor,
+  fitCategories,
+  fitFinder,
+  FINE_HALF_WIDTH,
+  FINE_SPREAD,
+  INTERVAL_LEVEL,
+  nextSession,
+  planSession,
+  pointsTo,
+  recommend,
+} from './finder'
+export type { FinderFit, FitOptions, FitReason, NextReason, NextSession, PlannedRun } from './finder'
 export { cm360For, convertSensitivity, eDpi, gameProfiles, gameSensitivityFor, getGameProfile, isGameProfileId, practiceFov, profileFov, readSensitivity } from './game-profiles'
 export type { GameFov, GameProfile, GameProfileId, SensitivityReading } from './game-profiles'
 export { createRng } from './rng'

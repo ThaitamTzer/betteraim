@@ -1,5 +1,5 @@
 import { createAnthropicProvider } from './anthropic'
-import { isLocalUrl } from './errors'
+import { failureMessage, isLocalUrl } from './errors'
 import { createOpenAiProvider } from './openai'
 import type { CoachProvider } from '../core'
 
@@ -7,7 +7,7 @@ export type CoachProviderId = 'anthropic' | 'openai'
 
 /**
  * How the player connected the AI Coach. It holds API keys, so it lives under its own localStorage key and is never part of
- * the Run export file (which only reads the RunStore), of `Preferences`, or of anything logged. A key is sent to the
+ * the export file (which reads the RunStore and the player's setup, Preferences and Player Context, never this key), of `Preferences`, or of anything logged. A key is sent to the
  * provider the player chose and nowhere else. Both providers keep their own fields so switching does not lose a key.
  */
 export interface CoachSettings {
@@ -70,6 +70,10 @@ export const saveCoachSettings = (settings: CoachSettings): void => {
 
 /** A pasted `/chat/completions` and trailing slashes are not part of the base URL. */
 export const normalizeBaseUrl = (url: string): string => url.trim().replace(/\/+$/, '').replace(/\/chat\/completions$/i, '')
+
+/** `failureMessage` for the connection these settings describe: its extra hint about a blocked permission applies to a local model server only. */
+export const coachFailureMessage = (error: unknown, s: CoachSettings): Promise<string> =>
+  failureMessage(error, s.provider === 'openai' && isLocalUrl(normalizeBaseUrl(s.openai.baseUrl)))
 
 /**
  * What is wrong with a base URL, or null. The Content Security Policy only lets `https:` through, plus `http:` to localhost and
