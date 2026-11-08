@@ -43,6 +43,13 @@ _Avoid_: sens chart, sens graph
 The Sensitivity at the top of the Performance Curve, always stated with its confidence interval.
 _Avoid_: statistical sens, model sens
 
+**Centre**:
+The Sensitivity a Finder Session's levels are spread around: the player's current Sensitivity at first, later the Curve Peak.
+
+**Level**:
+One of the Sensitivities a Finder Session plays each of its Scenarios at; the coarse phase has 7, from half to double the Centre.
+_Avoid_: step, setting
+
 **Recommended Sensitivity**:
 The Sensitivity BetterAim recommends for one Game Profile: chosen by the AI Coach within the Curve Peak's confidence interval, or the Curve Peak itself when no AI Coach is connected.
 _Avoid_: optimal sens, best sens, perfect sens
