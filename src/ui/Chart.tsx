@@ -7,6 +7,8 @@ export interface ChartSeries {
   label: string
   /** One value per x; `null` leaves a gap (the line carries on across it). */
   values: readonly (number | null)[]
+  /** Draw dots at the values instead of a line (for measured points next to a fitted curve). */
+  dots?: boolean
 }
 
 export interface ChartProps {
@@ -20,6 +22,8 @@ export interface ChartProps {
   /** What the x axis and the legend call an x. Default: the number as it is. */
   formatX?: (x: number) => string
   xLabel?: string
+  /** A logarithmic x axis (x must be > 0): equal ratios are equal distances, as for Sensitivity. */
+  logX?: boolean
   /** For people who cannot see the chart. */
   description: string
   height?: number
@@ -27,8 +31,18 @@ export interface ChartProps {
 
 const palette = ['#ffb35c', '#6cb6ff', '#4ade80', '#f472b6']
 
+const TICK_STEPS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9]
+/** Round ticks (20, 25, 30 ... 100, 150) for a log axis from `min` to `max`, whose own splits are decades and leave a short range bare. */
+const logTicks = (min: number, max: number): number[] => {
+  const ticks: number[] = []
+  for (let decade = 10 ** Math.floor(Math.log10(min)); decade <= max; decade *= 10) {
+    for (const step of TICK_STEPS) if (step * decade >= min && step * decade <= max) ticks.push(step * decade)
+  }
+  return ticks
+}
+
 /** A line chart (uPlot, ADR-0001) in the colours of the app. It is rebuilt when its props change, so pass stable props. */
-export function Chart({ x, series, markers = [], bands = [], formatX = String, xLabel = 'x', description, height = 220 }: ChartProps) {
+export function Chart({ x, series, markers = [], bands = [], formatX = String, xLabel = 'x', logX = false, description, height = 220 }: ChartProps) {
   const host = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const el = host.current
@@ -43,14 +57,29 @@ export function Chart({ x, series, markers = [], bands = [], formatX = String, x
         width: el.clientWidth || 480,
         height,
         // a little room so the first and last points do not sit on the frame (and a lone point is not on a collapsed axis)
-        scales: { x: { time: false, range: (_u, min, max) => [min - ((max - min) * 0.04 || 1), max + ((max - min) * 0.04 || 1)] } },
+        scales: {
+          x: logX
+            ? { time: false, distr: 3, log: 10, range: (_u, min, max) => [min / 1.04, max * 1.04] }
+            : { time: false, range: (_u, min, max) => [min - ((max - min) * 0.04 || 1), max + ((max - min) * 0.04 || 1)] },
+        },
         axes: [
-          { ...axis, space: 70, values: (_u, splits) => splits.map((v) => formatX(v)) },
+          {
+            ...axis,
+            space: 70,
+            values: (_u, splits) => splits.map((v) => (v == null ? '' : formatX(v))),
+            // uPlot's default log filter keeps only 1s, 2s and 3s or so of each decade and would blank these
+            ...(logX && { splits: (_u: uPlot, _axis: number, min: number, max: number) => logTicks(min, max), filter: (_u: uPlot, splits: number[]) => splits }),
+          },
           axis,
         ],
         series: [
           { label: xLabel, value: (_u, v) => (v == null ? '--' : formatX(v)) },
-          ...series.map((s, i) => ({ label: s.label, stroke: palette[i % palette.length]!, width: 2, spanGaps: true })),
+          ...series.map((s, i) => {
+            const color = palette[i % palette.length]!
+            return s.dots
+              ? { label: s.label, stroke: color, width: 0, paths: () => null, points: { show: true, size: 7, fill: color, stroke: color } }
+              : { label: s.label, stroke: color, width: 2, spanGaps: true }
+          }),
         ],
         cursor: { drag: { x: false, y: false } },
         hooks: {
@@ -95,6 +124,6 @@ export function Chart({ x, series, markers = [], bands = [], formatX = String, x
       resize.disconnect()
       plot.destroy()
     }
-  }, [x, series, markers, bands, formatX, xLabel, height])
+  }, [x, series, markers, bands, formatX, xLabel, logX, height])
   return <div ref={host} className="chart" role="img" aria-label={description} />
 }

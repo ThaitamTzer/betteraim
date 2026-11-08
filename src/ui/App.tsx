@@ -4,6 +4,7 @@ import { Home } from './screens/Home'
 import { Converter } from './screens/Converter'
 import { Finder } from './screens/Finder'
 import { FinderBreak } from './screens/FinderBreak'
+import { FinderResult } from './screens/FinderResult'
 import { Onboarding } from './screens/Onboarding'
 import { Options } from './screens/Options'
 import { Practice } from './screens/Practice'
@@ -29,6 +30,7 @@ const screens: Screens = {
   session: SessionSummary,
   finder: Finder,
   finderSession: FinderBreak,
+  finderResult: FinderResult,
 }
 
 export function App() {

@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import type { Fov, RunMeta, RunParams, RunRecord } from '../core'
+import type { Fov, GameProfileId, RunMeta, RunParams, RunRecord } from '../core'
 import type { FinderSession, FinderStep } from './finder'
 
 /**
@@ -37,6 +37,11 @@ export type Route =
   | { name: 'finder' }
   /** Between the Runs of a Finder Session; `last` is the Run that just finished (rest only). The topbar is hidden here. */
   | { name: 'finderSession'; session: FinderSession; step: FinderStep; last?: RunRecord }
+  /**
+   * The Performance Curve and Recommended Sensitivity of one Game Profile, from all its Finder Runs. `sessionId` is the Session
+   * just played (for its summary), `saving` the id of its last Run, which may still be being saved when this opens.
+   */
+  | { name: 'finderResult'; gameProfileId: GameProfileId; dpi: number; sessionId?: string; saving?: string }
   /** `more` goes to the next pick of the same Session (the Practice picker); absent when the Session has no picker. */
   | { name: 'result'; record: RunRecord; again: Route; more?: Route }
 

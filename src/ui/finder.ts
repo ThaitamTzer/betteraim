@@ -1,5 +1,5 @@
 import { cm360For, coarseLevels, getGameProfile, getScenario, planSession, profileFov } from '../core'
-import type { Fov, GameProfileId, PlannedRun } from '../core'
+import type { Fov, GameProfileId, PlannedRun, RunRecord } from '../core'
 import type { Route } from './routes'
 import type { Settings } from './settings'
 
@@ -46,8 +46,17 @@ export type FinderStep = 'rest' | 'abandoned' | 'notRaw' | 'complete'
 /** "Run 5 of 16"; the first two are Warm-up Runs. Never the Sensitivity. */
 export const runLabel = ({ done, plan }: FinderSession): string => `Run ${done + 1} of ${plan.length}${plan[done]?.warmup ? ' (warm-up)' : ''}`
 
-/** Where a finished Session goes. Ticket #10 returns the Finder result route here (#12 may link the Session summary from it). */
-export const sessionEnd = (session: FinderSession): Route => ({ name: 'finderSession', session, step: 'complete' })
+/**
+ * Where a finished Session goes: the Finder result screen. `last` is the Run that just ended; its save is still in flight, so
+ * the screen waits for it (`saving`) before it reads the Runs and reports a failed save. (The `complete` step of `finderSession` is no longer reached.)
+ */
+export const sessionEnd = (session: FinderSession, last?: RunRecord): Route => ({
+  name: 'finderResult',
+  gameProfileId: session.gameProfileId,
+  dpi: session.dpi,
+  sessionId: session.id,
+  ...(last && { saving: last.id }),
+})
 
 /** The next planned Run, ready for the `run` route. Resuming an abandoned Run calls this again with the same `done`. */
 export function runRoute(session: FinderSession): Extract<Route, { name: 'run' }> {
@@ -62,7 +71,7 @@ export function runRoute(session: FinderSession): Extract<Route, { name: 'run' }
     session: { label: runLabel(session), onAbandon: between('abandoned'), onNotRaw: between('notRaw') },
     next: (record) => {
       const after = { ...session, done: done + 1 }
-      return done + 1 === plan.length ? sessionEnd(after) : { name: 'finderSession', session: after, step: 'rest', last: record }
+      return done + 1 === plan.length ? sessionEnd(after, record) : { name: 'finderSession', session: after, step: 'rest', last: record }
     },
   }
 }

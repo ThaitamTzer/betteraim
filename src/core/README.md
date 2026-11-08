@@ -24,6 +24,7 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   (rates recomputed from pooled counts, Warm-up Runs only counted in `warmups`), `groupRuns(items, keyOf)` for any grouping, with `bySession`
   and `byDay(items, dayOf)` on top (the shell supplies `dayOf`: the core has no time zone). `loadAnalysed(store, filter, cache?)` lists, loads and
   analyses Runs (about 100 ms per Run: pass a `Map` cache when you load more than once). `poolTracking` pools `TrackingMetrics` (= `TrackingAnalysis`) by sample count and Run length. Ticket #14/#15 reuse it on their own groupings.
+- `finder/` the Session plan (`plan.ts`, #9) and the fit (`model.ts`, #10); see the two Finder sections below. Not here yet: fine phase and Reset (#11), the AI Coach's Recommended Sensitivity (#15).
 - `coach/` the AI Coach (ADR-0003), network-free. `provider.ts` is the port: `CoachProvider.complete({ system, prompt, json? })` returns the model's text
   (`json: { name, schema }` asks for a JSON reply: free text and structured are one call, so an operation never changes an adapter), and
   `CoachError` with a `kind` (`refusal | network | auth | rate-limit | malformed | provider`) whose message is written for the player.
@@ -32,7 +33,6 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   { system, prompt, name, schema })` is the structured operation: it states the schema in the prompt too, parses (a code fence is tolerated) and
   checks the reply against the schema (`schemaError`), throwing `malformed` otherwise. Ticket #15 builds the Recommended Sensitivity on `askJson`
   (its guardrail, retry and cache belong in the core, next to it). Adapters and the key store are shell code in `src/coach/`: no retry loops, one request per press.
-- Not here yet: Finder (#9-#11), the AI Coach's Recommended Sensitivity (#15).
 
 ## Conventions
 - Units: degrees, ms since Run start, Sensitivity = cm/360. Yaw > 0 is right, pitch > 0 is up (crosshair pitch is clamped to
@@ -101,6 +101,41 @@ replaySteps(record, record.input, ({ crosshair, held, targets }) => {
 - Saved Runs carry `mode: 'finder'`, `warmup`, `sessionId` and `levels` (levels per Scenario). A (Session, Scenario) pair is complete when it has
   `levels` non-warm-up Runs; an abandoned or quit Session leaves incomplete pairs for #10 to exclude. Run order within a Session is `startedAt`.
 - The shell side (session loop, screens that never print a Sensitivity) is in `src/ui/finder.ts`.
+
+## Sensitivity Finder fit (`finder/model.ts`, ticket #10)
+`fitFinder(runs, { weights, exclude? }) => FinderFit`. Pure and deterministic, never throws. `runs` are the `RunSummary`s of ONE Game Profile (the caller
+filters; `store.list({ gameProfileId, mode: 'finder' })` is enough, nothing needs analysing); `weights` is `getGameProfile(id).weights`. The fit itself drops
+Warm-up Runs, Practice Runs, whatever `exclude(run)` names (Reset Finder, #11: `(r) => r.startedAt < resetAt`) and every (Session, Scenario) pair with fewer
+counted Runs than `RunMeta.levels` (pairs are judged after `exclude`, so a Reset in the middle of a Session drops its pairs). Spec model, in this order:
+- Score / the Scenario's standard deviation over ALL its fitted Runs (not per pair). Then scaled Score = quadratic in ln(Sensitivity) + run-order term (rank of
+  the Run in its Session by `startedAt`) + an offset per (Session, Scenario) pair. The offsets are absorbed by demeaning every regressor AND the Score inside the
+  pair, which equals explicit dummies (the brute-force `testing/reference-fit.ts` agrees to 1e-6). Demeaning only the Score is the biased shortcut the spec forbids.
+- Weight per Run = (category target share) / (category share of the fitted Runs), once. Only categories that have Runs count, so **fit one category by passing only
+  its Runs** (per-category curves, #11): the weights are then 1.
+- Peak = vertex of the quadratic in cm/360, only if it is a maximum inside the tested range; else `peak: null`.
+
+`FinderFit` fields:
+- `peak: Cm360 | null`, `reason: null | 'insufficient-data' | 'no-interior-peak'`. `no-interior-peak` = the curve is a valley or its top lies outside `range`; then `curve`
+  and `range` are still filled, and **the higher end of `curve.score` is the side to shift the Centre towards** (#11 owns the message and the shift).
+  `insufficient-data` = nothing to fit, or too few Runs/levels to identify the curve (then `curve` is empty).
+- `interval: { low, high, halfWidth } | null`: percentile bootstrap over Sessions, 2000 resamples (`BOOTSTRAP_RESAMPLES`), central 90% (`INTERVAL_LEVEL`), clamped to `range`,
+  always containing `peak`. `halfWidth = (high - low) / 2 / peak`, so `halfWidth < 0.25` is the fine-phase switch and `halfWidth < 0.1` (`ENOUGH_HALF_WIDTH`) is `enoughData`.
+  Null without a peak or with fewer than 2 Sessions (nothing to resample). The bootstrap is seeded from the fitted Runs (FNV-1a of their ids, Sensitivities and
+  Scores), so the same data gives the same interval and #15 may cache on the Runs. A fit takes about 10 ms for 10 Sessions.
+- **The interval is stretched.** Resampling few Sessions under-states the spread, so the percentile interval is widened about the peak by `sqrt(S/(S-1)) x t/z` (Student t on
+  S-1 df over the normal, 95th percentiles). Plain percentiles covered the true optimum 73% of the time at 5 Sessions (nominal 90%); stretched, 88 to 89% from 5 to 12
+  Sessions on the default synthetic player, whose intervals are about +-37% at 2 Sessions, +-13% at 5 and +-9.5% at 8: "enough data" arrives after roughly 8 to 12 coarse Sessions.
+- `range`: tested Sensitivities `{ min, max }`. `curve: { sensitivity[], score[] }`: 61 log-spaced points over `range`; `score` is in Scenario spreads **relative to the top of the curve** (max 0).
+  `points`: per distinct tested Sensitivity, the mean scaled Score with pair offsets and run order taken out, on the same axis as `curve` (the partial residuals).
+- `coefficients`: slopes in x = (ln c - centre) / halfRange, so `range` is x in [-1, 1]; `offsets`: per pair, the scaled Score at the top of the curve at Session start;
+  `spread`: the divisor of each Scenario; `counts`: Sessions, pairs, Runs used and Runs excluded by cause.
+- `recommend(fit)` is the seam of #15: today the Curve Peak; the AI Coach's choice inside `fit.interval` replaces it there.
+
+Synthetic players (`testing/synthetic.ts`, tests only, also for #11): `syntheticPlayer({ optimum, curvature, noise, trend, form, warmupPenalty, scenarios })` and
+`syntheticRuns(player, sessions, seed)` make `RunSummary`s without the engine. Score = level + scale x (-curvature x ln(c / optimum)^2 + trend x order + form + noise); `form` is one draw
+per (Session, Scenario) pair, `noise` one per Run, all derived from `seed`. A session is `{ levels, scenarios?, abandonAfter?, centre? }`: 2 Warm-up Runs (penalised) then every
+Scenario at every level, shuffled; `abandonAfter: n` keeps only the first n counted Runs while `RunMeta.levels` still says the plan (an incomplete pair). Give a Scenario its own
+`optimum` to make categories disagree. Scenarios that share a curve shape on mirrored levels pool to the exact weighted mean of their optima (see the category weighting tests).
 
 ## Adding a Scenario
 Implement `ScenarioDefinition` (`rules(seed)` returns `Rules`: `targets`, `events`, `score`, plus `shoot` for Clicking and
