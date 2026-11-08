@@ -15,3 +15,9 @@
 .chart-block .chart + .hint {
   margin-top: 0.5rem;
 }
+
+/* One line per category under the Clicking and Tracking chart */
+.category-lines {
+  margin: 0.75rem 0;
+  padding-left: 1.25rem;
+}

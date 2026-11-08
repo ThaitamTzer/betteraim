@@ -1,19 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fitFinder, getGameProfile, INTERVAL_LEVEL, practiceFov } from '../../core'
-import type { FinderFit } from '../../core'
+import { finderRunsFor, fitCategories, fitFinder, getGameProfile, INTERVAL_LEVEL, nextSession, practiceFov } from '../../core'
+import type { FinderFit, NextSession, ScenarioCategory } from '../../core'
 import { runStore, saveOutcome } from '../../storage/runs'
 import { Chart } from '../Chart'
-import { chartRows, resultView } from '../finder-result'
+import { centreOf } from '../finder'
+import { categoriesView, categoryRows, chartRows, nextView, resultView } from '../finder-result'
 import { fmt } from '../format'
 import { loadPreferences } from '../preferences'
 import type { ScreenProps } from '../routes'
+import { loadSettings } from '../settings'
 import '../summary.css'
 import '../finder-result.css'
 
 const formatX = (x: number): string => fmt(x)
 const errorText = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
-type Loaded = { fit: FinderFit } | { error: string } | null
+type Loaded = { fit: FinderFit; categories: Record<ScenarioCategory, FinderFit>; next: NextSession } | { error: string } | null
 
 /**
  * The Performance Curve of one Game Profile and what it recommends. It is the one screen that shows Sensitivities of Finder
@@ -24,6 +26,10 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
   const game = getGameProfile(gameProfileId)
   const [loaded, setLoaded] = useState<Loaded>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // Reset Finder (#11): `reloads` makes the effect read the Runs again once the marker is stored.
+  const [reloads, setReloads] = useState(0)
+  const [confirmingReset, setConfirmingReset] = useState(false)
+  const [resetError, setResetError] = useState<string | null>(null)
 
   useEffect(() => {
     let current = true
@@ -31,16 +37,32 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
       // The Session's last Run is still being saved when this opens: wait for it, or the fit would miss it.
       if (saving) await saveOutcome(saving)?.catch((error: unknown) => current && setSaveError(errorText(error)))
       const store = await runStore()
-      const runs = await store.list({ gameProfileId, mode: 'finder' })
-      return fitFinder(runs, { weights: game.weights })
+      // The Runs and the Reset marker come from finderRunsFor, the one place the marker is applied.
+      const { runs, exclude } = await finderRunsFor(store, gameProfileId)
+      const options = { weights: game.weights, exclude }
+      const fit = fitFinder(runs, options)
+      const settings = loadSettings()
+      const own = settings?.gameProfileId === gameProfileId ? settings : { gameProfileId, gameSensitivity: game.defaultSensitivity, dpi }
+      return { fit, categories: fitCategories(runs, options), next: nextSession(fit, centreOf(own)) }
     })().then(
-      (fit) => current && setLoaded({ fit }),
+      (result) => current && setLoaded(result),
       (error: unknown) => current && setLoaded({ error: errorText(error) }),
     )
     return () => {
       current = false
     }
-  }, [gameProfileId, saving, game])
+  }, [gameProfileId, dpi, saving, game, reloads])
+
+  const resetFinder = async () => {
+    try {
+      await (await runStore()).resetFinder(gameProfileId, Date.now())
+      setResetError(null)
+      setConfirmingReset(false)
+      setReloads((n) => n + 1)
+    } catch (error) {
+      setResetError(errorText(error))
+    }
+  }
 
   const view = useMemo(() => (loaded && 'fit' in loaded ? resultView(loaded.fit, gameProfileId, dpi) : null), [loaded, gameProfileId, dpi])
   const recommended = view?.recommended ?? null
@@ -59,6 +81,24 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
       markers: fit.peak === null ? [] : [{ x: fit.peak, label: 'Curve Peak' }],
       bands: fit.interval ? [{ from: fit.interval.low, to: fit.interval.high }] : [],
       description: `Performance Curve: Score against Sensitivity in cm/360${fit.peak === null ? ', with no interior peak' : `, highest at ${fmt(fit.peak)} cm/360${bounds}`}`,
+    }
+  }, [loaded])
+  // The Clicking and Tracking curves on their own chart (#11); null until some Run has been fitted.
+  const byCategory = useMemo(() => {
+    if (!loaded || 'error' in loaded || loaded.fit.counts.runs === 0) return null
+    const rows = categoryRows(loaded.categories)
+    const text = categoriesView(loaded.categories)
+    return {
+      text,
+      chart: rows.x.length === 0 ? null : {
+        x: rows.x,
+        series: [
+          { label: 'Clicking', values: rows.clicking },
+          { label: 'Tracking', values: rows.tracking },
+        ],
+        markers: rows.markers,
+        description: `Clicking and Tracking curves: Score against Sensitivity in cm/360. ${text.categories.map((c) => c.message).join(' ')}`,
+      },
     }
   }, [loaded])
 
@@ -82,6 +122,11 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
       {sessionId && (
         <button type="button" onClick={() => go({ name: 'session', sessionId, back: route })}>
           Session summary
+        </button>
+      )}
+      {loaded && 'fit' in loaded && loaded.fit.counts.runs > 0 && !confirmingReset && (
+        <button type="button" onClick={() => setConfirmingReset(true)}>
+          Reset Finder
         </button>
       )}
       <button type="button" onClick={() => go({ name: 'home' })}>
@@ -113,6 +158,7 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
       <p className={view?.enough ? 'result-message enough' : 'result-message'} role="status">
         {view?.message}
       </p>
+      <p className="hint">Next Session: {nextView(loaded.next)}</p>
 
       {recommended && view && (
         <>
@@ -151,6 +197,58 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
             {fit.interval ? '; the shaded band is the interval of the Curve Peak' : ''}.
           </p>
         </section>
+      )}
+
+      {byCategory && (
+        <section className="chart-block">
+          <h2>Clicking and Tracking</h2>
+          {byCategory.chart && (
+            <Chart
+              x={byCategory.chart.x}
+              series={byCategory.chart.series}
+              markers={byCategory.chart.markers}
+              formatX={formatX}
+              xLabel="cm/360"
+              logX
+              height={180}
+              description={byCategory.chart.description}
+            />
+          )}
+          <ul className="category-lines">
+            {byCategory.text.categories.map((c) => (
+              <li key={c.label}>{c.message}</li>
+            ))}
+          </ul>
+          {byCategory.text.difference && <p className="result-message">{byCategory.text.difference}</p>}
+          <p className="hint">
+            Each curve is fitted on its own Scenarios only, so the Clicking and Tracking mix of {game.name} does not enter it. The Performance Curve above does weigh them.
+          </p>
+        </section>
+      )}
+
+      {resetError !== null && (
+        <p className="warning" role="alert">
+          The Finder could not be reset: {resetError}
+        </p>
+      )}
+      {confirmingReset && (
+        <div className="warning" role="alertdialog" aria-labelledby="reset-title">
+          <p id="reset-title">
+            <strong>Reset the Sensitivity Finder for {game.name}?</strong>
+          </p>
+          <p>
+            The curve starts again from nothing: your earlier Finder Runs stop counting towards it and the next Session is coarse. Your raw data is kept. Every
+            earlier Run stays in Analysis, History and Past Runs, and in your exports.
+          </p>
+          <div className="actions">
+            <button type="button" className="primary" onClick={() => void resetFinder()} autoFocus>
+              Reset Finder
+            </button>
+            <button type="button" onClick={() => setConfirmingReset(false)}>
+              Keep my curve
+            </button>
+          </div>
+        </div>
       )}
       {actions}
     </main>
