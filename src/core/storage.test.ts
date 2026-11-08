@@ -52,3 +52,25 @@ describe('run store', () => {
     expect(await ids({ gameProfileId: 'none' })).toEqual([])
   })
 })
+
+describe('Reset Finder markers', () => {
+  it('start empty, are kept per Game Profile, and never move back', async () => {
+    const store = createMemoryStore()
+    expect(await store.finderResets()).toEqual({})
+    await store.resetFinder('valorant', 500)
+    await store.resetFinder('cs2', 700)
+    await store.resetFinder('valorant', 400) // an older marker (an import from a machine that reset earlier) cannot undo a later one
+    expect(await store.finderResets()).toEqual({ valorant: 500, cs2: 700 })
+    await store.resetFinder('valorant', 900)
+    expect((await store.finderResets()).valorant).toBe(900)
+  })
+
+  it('do not touch the Runs', async () => {
+    const store = createMemoryStore()
+    const record = testRecord({}, { id: 'a', startedAt: 100 })
+    await store.save([record])
+    await store.resetFinder('test', 1_000)
+    expect(await store.list()).toHaveLength(1)
+    expect(await store.get('a')).toEqual(record)
+  })
+})

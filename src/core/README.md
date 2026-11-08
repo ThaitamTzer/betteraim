@@ -14,7 +14,8 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 - `rng.ts` `createRng(seed)`. `tally.ts` `tallyShots`. `testing/` bots and test params (tests only).
 - `codec.ts` lossless binary form of `input` and `targetEvents` (+ base64). `storage.ts` the `RunStore` port (`save`, `list(filter)`
   summaries, `get`) and `createMemoryStore()` for tests. `exchange.ts` `exportData`/`importData`: one versioned JSON file, validated
-  before any write, merged by Run id. The IndexedDB adapter is shell code in `src/storage/`. `testing/records.ts` `testRecord()` is a
+  before any write, merged by Run id. The store also keeps the Reset Finder markers (`finderResets()`, `resetFinder(id, at)`, see below); the export file carries
+  them as the optional `finderResets` key. The IndexedDB adapter is shell code in `src/storage/`. `testing/records.ts` `testRecord()` is a
   fully played record.
 - `game-profiles.ts` the 7 Game Profiles (yaw, vertical setting, FOV, default Game Sensitivity, Clicking/Tracking weights, each
   value with its source), the Game Sensitivity <-> cm/360 formulas, the Converter (`convertSensitivity`, `readSensitivity`) and
@@ -24,7 +25,7 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   (rates recomputed from pooled counts, Warm-up Runs only counted in `warmups`), `groupRuns(items, keyOf)` for any grouping, with `bySession`
   and `byDay(items, dayOf)` on top (the shell supplies `dayOf`: the core has no time zone). `loadAnalysed(store, filter, cache?)` lists, loads and
   analyses Runs (about 100 ms per Run: pass a `Map` cache when you load more than once). `poolTracking` pools `TrackingMetrics` (= `TrackingAnalysis`) by sample count and Run length. Ticket #14/#15 reuse it on their own groupings.
-- `finder/` the Session plan (`plan.ts`, #9) and the fit (`model.ts`, #10); see the two Finder sections below. Not here yet: fine phase and Reset (#11), the AI Coach's Recommended Sensitivity (#15).
+- `finder/` the Session plan (`plan.ts`, #9), the fit (`model.ts`, #10), the next Session, Reset and per-category fits (`next.ts`, `reset.ts`, `categories.ts`, #11); see the Finder sections below. Not here yet: the AI Coach's Recommended Sensitivity (#15).
 - `coach/` the AI Coach (ADR-0003), network-free. `provider.ts` is the port: `CoachProvider.complete({ system, prompt, json? })` returns the model's text
   (`json: { name, schema }` asks for a JSON reply: free text and structured are one call, so an operation never changes an adapter), and
   `CoachError` with a `kind` (`refusal | network | auth | rate-limit | malformed | provider`) whose message is written for the player.
@@ -136,6 +137,24 @@ Synthetic players (`testing/synthetic.ts`, tests only, also for #11): `synthetic
 per (Session, Scenario) pair, `noise` one per Run, all derived from `seed`. A session is `{ levels, scenarios?, abandonAfter?, centre? }`: 2 Warm-up Runs (penalised) then every
 Scenario at every level, shuffled; `abandonAfter: n` keeps only the first n counted Runs while `RunMeta.levels` still says the plan (an incomplete pair). Give a Scenario its own
 `optimum` to make categories disagree. Scenarios that share a curve shape on mirrored levels pool to the exact weighted mean of their optima (see the category weighting tests).
+
+## Finder phases, Reset and per-category curves (ticket #11)
+- **Next Session** (`finder/next.ts`): `nextSession(fit, fallbackCentre) => { phase, centre, levels, reason }`, pure on the fit, so the Centre needs no stored state. `planSession` gets its
+  `centre` and `levels`; `RunMeta.levels` is `levels.length` (7 coarse, 5 fine). `fallbackCentre` is the player's current Sensitivity and is used only while there is nothing to go on (`reason: 'start'`).
+  - Interior peak: `centre = fit.peak`. `interval.halfWidth < FINE_HALF_WIDTH` (0.25) is the **fine phase**: 5 log-spaced levels from peak x 0.8 to peak x 1.2 (the middle one is the geometric mean, peak x 0.98).
+    At 0.25 or wider, or with no interval yet, it stays coarse (`coarseLevels(peak)`): it is centred on the peak too, so a shift made earlier is never undone by going back to the player's Sensitivity.
+  - `no-interior-peak`: coarse, with the Centre at the edge of `fit.range` that the higher end of `fit.curve.score` points to (`range.max` for `shift-higher`, `range.min` for `shift-lower`). The coarse range is x0.5 to x2
+    around its Centre, so the old edge is the middle level (k = 0) of the new range and 4 of its 7 levels were played before: the pooled fit has overlap to tie the two ranges together. Repeating the rule walks the range
+    one edge to the next until the optimum is inside it (tested closed-loop: each new Session is fitted with the Runs so far).
+  - The shell (`src/ui/finder.ts` `newFinderSession(settings, seed, id, next)`, `screens/Finder.tsx`) plans from the fit of `finderRunsFor`, and the result screen shows `nextView(next)`. A Session's levels are never printed.
+- **Reset Finder** (`finder/reset.ts`): the marker is `store.resetFinder(gameProfileId, Date.now())`, one time per Game Profile, kept beside the Runs and **never moved back** (an older marker from an import cannot undo a later reset).
+  `finderRunsFor(store, gameProfileId) => { runs, exclude, resetAt }` is the ONE place that applies it: `runs` are all the Game Profile's Finder Runs, `exclude(run)` is `run.startedAt < resetAt` (a Run that starts at the marker counts) for
+  `fitFinder`'s `exclude`, `resetAt` the marker. Anything else that must see the Runs the fit uses (the AI Coach's payload, #15) takes `runs.filter((r) => !exclude(r))`, or passes `resetAt` as `RunFilter.since` to avoid analysing Runs it will drop.
+  Excluded Runs stay in the store untouched: Analysis, History, Past Runs and exports still have them. A Session cut by the marker loses the pairs it leaves incomplete (see the fit).
+  The export file has the optional top-level key `finderResets: { [gameProfileId]: time }` at format version 1 (absent when nothing was reset, and in older files, which import with no resets); `importData` validates it with the Runs
+  before any write and merges it with the later time winning. The IndexedDB adapter keeps them in a third object store (database version 2).
+- **Per-category curves** (`finder/categories.ts`): `fitCategories(runs, options) => { clicking, tracking }` is `fitFinder` on each category's Runs alone (same `exclude`; the weights have nothing to weigh). A category with too little
+  data is an ordinary `insufficient-data` fit. The result screen (`ui/finder-result.ts` `categoriesView`) says the two peaks differ noticeably when both have an interval and the intervals do not overlap.
 
 ## Adding a Scenario
 Implement `ScenarioDefinition` (`rules(seed)` returns `Rules`: `targets`, `events`, `score`, plus `shoot` for Clicking and

@@ -50,6 +50,15 @@ The Sensitivity a Finder Session's levels are spread around: the player's curren
 One of the Sensitivities a Finder Session plays each of its Scenarios at; the coarse phase has 7, from half to double the Centre.
 _Avoid_: step, setting
 
+**Coarse phase**:
+The Finder's first stage: Sessions with 7 Levels from half to double the Centre, until the Curve Peak's confidence interval is narrower than ±25%. When the best Sensitivity lies outside the tested range, the Centre shifts towards it.
+
+**Fine phase**:
+The Finder's second stage: Sessions with 5 Levels within ±20% of the Curve Peak.
+
+**Reset Finder**:
+Per Game Profile, makes the Sensitivity Finder ignore all earlier Runs so it measures again; the Runs themselves are kept for Analysis and History.
+
 **Recommended Sensitivity**:
 The Sensitivity BetterAim recommends for one Game Profile: chosen by the AI Coach within the Curve Peak's confidence interval, or the Curve Peak itself when no AI Coach is connected.
 _Avoid_: optimal sens, best sens, perfect sens
