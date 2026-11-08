@@ -22,8 +22,8 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
   A Game Profile id (`GameProfileId`) is what `RunMeta.gameProfileId` holds. Add a game by adding one entry to the table.
 - `aggregate.ts` pure aggregators over `AnalysedRun = { run: RunSummary, analysis: RunAnalysis }`: `aggregateRuns(items)` pools per Scenario
   (rates recomputed from pooled counts, Warm-up Runs only counted in `warmups`), `groupRuns(items, keyOf)` for any grouping, with `bySession`
-  and `byDay(items, dayOf)` on top (the shell supplies `dayOf`: the core has no time zone). `loadAnalysed(store, filter)` lists, loads and
-  analyses Runs. Tracking metrics extend `poolTracking` and `TrackingMetrics` there (#8). Ticket #14/#15 reuse it on their own groupings.
+  and `byDay(items, dayOf)` on top (the shell supplies `dayOf`: the core has no time zone). `loadAnalysed(store, filter, cache?)` lists, loads and
+  analyses Runs (about 100 ms per Run: pass a `Map` cache when you load more than once). Tracking metrics extend `poolTracking` and `TrackingMetrics` there (#8). Ticket #14/#15 reuse it on their own groupings.
 - Not here yet: Tracking Analysis (#8), Finder (#9-#11), AI Coach (#14, #15).
 
 ## Conventions
