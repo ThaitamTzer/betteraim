@@ -7,6 +7,8 @@ import type { RunMeta, RunParams, RunRecord } from '../core'
  */
 export type Route =
   | { name: 'home' }
+  /** Scenario picker; a chosen Scenario is played as a Practice Run at this Sensitivity. */
+  | { name: 'practice'; sensitivity: number; dpi: number }
   | {
       name: 'run'
       params: RunParams
