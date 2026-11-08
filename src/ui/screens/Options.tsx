@@ -6,6 +6,8 @@ import { CoachSection } from '../CoachSection'
 import { Crosshair } from '../Crosshair'
 import { CheckField, ColorField, GameSelect, NumberField, RangeField, Select } from '../fields'
 import { fmt } from '../format'
+import { loadPlayerContext, savePlayerContext } from '../player-context'
+import { PlayerContextFields } from '../PlayerContextFields'
 import { loadPreferences, RANGES, savePreferences } from '../preferences'
 import type { Preferences } from '../preferences'
 import type { ScreenProps } from '../routes'
@@ -39,6 +41,7 @@ export function Options({ go }: ScreenProps<'options'>) {
       <HitSoundSection prefs={prefs} update={update} />
       <FovSection prefs={prefs} update={update} />
       <CoachSection />
+      <PlayerContextSection />
 
       <div className="actions">
         <button type="button" onClick={() => go({ name: 'home' })}>
@@ -215,6 +218,29 @@ function FovSection({ prefs, update }: SectionProps) {
             ? `Enter ${min} to ${max} degrees, or clear the field.`
             : "Degrees across a 16:9 screen. Leave it empty to practise with your game's own field of view. This applies to Practice only: the Sensitivity Finder always uses your game's, so its results stay comparable."}
         </p>
+      </div>
+    </section>
+  )
+}
+
+/** What the AI Coach is told about how the player plays; every choice optional, saved as it is made. */
+function PlayerContextSection() {
+  const [context, setContext] = useState(loadPlayerContext)
+  return (
+    <section>
+      <h2>Player Context</h2>
+      <p className="hint">
+        Optional. When the AI Coach chooses your Recommended Sensitivity it also reads these choices, and nothing you type: they are a fixed list, sent to your provider with your
+        aggregate figures.
+      </p>
+      <div className="setup">
+        <PlayerContextFields
+          value={context}
+          onChange={(next) => {
+            setContext(next)
+            savePlayerContext(next)
+          }}
+        />
       </div>
     </section>
   )

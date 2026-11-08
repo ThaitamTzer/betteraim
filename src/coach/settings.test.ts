@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createMemoryStore, exportData } from '../core'
 import { testRecord } from '../core/testing/records'
-import { baseUrlProblem, createCoachProvider, defaultCoachSettings, loadCoachSettings, missingSetup, normalizeBaseUrl, parseCoachSettings, saveCoachSettings } from './settings'
+import { baseUrlProblem, coachModelId, createCoachProvider, defaultCoachSettings, loadCoachSettings, missingSetup, normalizeBaseUrl, parseCoachSettings, saveCoachSettings } from './settings'
 
 describe('parseCoachSettings', () => {
   it('gives the defaults for a first visit or an unusable save', () => {
@@ -93,5 +93,26 @@ describe('being ready', () => {
     expect(missingSetup({ ...ready, openai: { ...ready.openai, baseUrl: 'http://192.168.0.2/v1' } })).toMatch(/URL/)
     expect(createCoachProvider({ ...defaultCoachSettings, anthropic: { apiKey: 'k', model: 'claude-opus-5-5' } })).not.toBeNull()
     expect(missingSetup({ ...defaultCoachSettings, anthropic: { apiKey: 'k', model: '' } })).toMatch(/model/)
+  })
+})
+
+describe('coachModelId', () => {
+  const connected = { ...defaultCoachSettings, anthropic: { apiKey: 'sk-ant-SECRET', model: 'claude-opus-5-5' }, openai: { baseUrl: 'https://openrouter.ai/api/v1/', model: 'x/y', apiKey: 'sk-or-SECRET' } }
+
+  it('names the provider and the model, so another one gets its own answers, and holds no key', () => {
+    const ids = [
+      coachModelId(connected),
+      coachModelId({ ...connected, anthropic: { ...connected.anthropic, model: 'claude-sonnet-5-5' } }),
+      coachModelId({ ...connected, provider: 'openai' }),
+      coachModelId({ ...connected, provider: 'openai', openai: { ...connected.openai, baseUrl: 'http://localhost:11434/v1' } }),
+      coachModelId({ ...connected, provider: 'openai', openai: { ...connected.openai, model: 'z' } }),
+    ]
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(ids.join()).not.toMatch(/SECRET/)
+  })
+
+  it('does not change with the key, the reply language or a trailing slash on the address', () => {
+    expect(coachModelId({ ...connected, anthropic: { ...connected.anthropic, apiKey: 'another' }, language: 'Vietnamese' })).toBe(coachModelId(connected))
+    expect(coachModelId({ ...connected, provider: 'openai' })).toBe(coachModelId({ ...connected, provider: 'openai', openai: { ...connected.openai, baseUrl: 'https://openrouter.ai/api/v1' } }))
   })
 })

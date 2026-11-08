@@ -1,4 +1,5 @@
-import { angleBetween, wrapDeg } from '../aim'
+import { angleFrom, directionOf, wrapDeg } from '../aim'
+import type { Vec } from '../aim'
 import { replaySteps, RUN_DURATION_MS } from '../run'
 import type { Aim, Target } from '../types'
 import { speedProfile } from './velocity'
@@ -63,17 +64,29 @@ export function analyseTracking(run: RunData): TrackingAnalysis {
   const offsets: (number | null)[] = []
   let timeOnTargetMs = 0
   let before: Aim = { yaw: 0, pitch: 0 }
+  // The crosshair object changes only when the mouse moved, so its direction is worked out once per move, not per target per step.
+  let looking: Aim | undefined
+  let direction: Vec = [0, 0, 0]
 
   replaySteps(run, run.input, ({ t, crosshair, held, targets }) => {
-    east.push(wrapDeg(crosshair.yaw - before.yaw) * Math.cos(crosshair.pitch * RAD))
-    north.push(crosshair.pitch - before.pitch)
+    if (crosshair === before) {
+      east.push(0) // no move this step: exactly what the two lines below give for the same crosshair
+      north.push(0)
+    } else {
+      east.push(wrapDeg(crosshair.yaw - before.yaw) * Math.cos(crosshair.pitch * RAD))
+      north.push(crosshair.pitch - before.pitch)
+    }
     before = crosshair
 
     // A fall means the fire was held on the target at this step, but the state already shows its replacement.
     let on = kills.has(t)
     let nearest: { target: Target; distance: number } | undefined
+    if (crosshair !== looking) {
+      looking = crosshair
+      direction = directionOf(crosshair)
+    }
     for (const target of targets) {
-      const distance = angleBetween(crosshair, target)
+      const distance = angleFrom(direction, target)
       if (held && distance <= target.radius) on = true
       if (!nearest || distance < nearest.distance) nearest = { target, distance }
     }

@@ -24,16 +24,16 @@ Pure TypeScript. No DOM, WebGL, React, clock or `Math.random`. Enforced by `tsco
 - `aggregate.ts` pure aggregators over `AnalysedRun = { run: RunSummary, analysis: RunAnalysis }`: `aggregateRuns(items)` pools per Scenario
   (rates recomputed from pooled counts, Warm-up Runs only counted in `warmups`), `groupRuns(items, keyOf)` for any grouping, with `bySession`
   and `byDay(items, dayOf)` on top (the shell supplies `dayOf`: the core has no time zone). `loadAnalysed(store, filter, cache?)` lists, loads and
-  analyses Runs (about 100 ms per Run: pass a `Map` cache when you load more than once). `poolTracking` pools `TrackingMetrics` (= `TrackingAnalysis`) by sample count and Run length. Ticket #14/#15 reuse it on their own groupings.
-- `finder/` the Session plan (`plan.ts`, #9), the fit (`model.ts`, #10), the next Session, Reset and per-category fits (`next.ts`, `reset.ts`, `categories.ts`, #11); see the Finder sections below. Not here yet: the AI Coach's Recommended Sensitivity (#15).
+  analyses Runs (15 to 70 ms per Run, Tracking Runs the most: pass a `Map` cache when you load more than once). `loadAnalysedRuns(store, summaries, cache?, onProgress?)` is the same for Runs already picked (the AI Coach analyses only `fit.counts.used`); `onProgress(done, total)` is awaited, so a screen can slice the work. `poolTracking` pools `TrackingMetrics` (= `TrackingAnalysis`) by sample count and Run length. Ticket #14/#15 reuse it on their own groupings.
+- `finder/` the Session plan (`plan.ts`, #9), the fit (`model.ts`, #10), the next Session, Reset and per-category fits (`next.ts`, `reset.ts`, `categories.ts`, #11); see the Finder sections below. The AI Coach's Recommended Sensitivity (#15) is in `coach/sensitivity.ts`.
 - `coach/` the AI Coach (ADR-0003), network-free. `provider.ts` is the port: `CoachProvider.complete({ system, prompt, json? })` returns the model's text
   (`json: { name, schema }` asks for a JSON reply: free text and structured are one call, so an operation never changes an adapter), and
   `CoachError` with a `kind` (`refusal | network | auth | rate-limit | malformed | provider`) whose message is written for the player.
   `advice.ts` `practiceAdvice(provider, { items, language })` builds the payload (`buildAdvicePayload`: `aggregateRuns` figures only, copied as
   numbers, so no Aim Movement list or input can get in) and one prompt, with the reply language in the system prompt. `json.ts` `askJson(provider,
   { system, prompt, name, schema })` is the structured operation: it states the schema in the prompt too, parses (a code fence is tolerated) and
-  checks the reply against the schema (`schemaError`), throwing `malformed` otherwise. Ticket #15 builds the Recommended Sensitivity on `askJson`
-  (its guardrail, retry and cache belong in the core, next to it). Adapters and the key store are shell code in `src/coach/`: no retry loops, one request per press.
+  checks the reply against the schema (`schemaError`), throwing `malformed` otherwise. The Recommended Sensitivity (#15) is built on `askJson`
+  (see the AI Coach section below). Adapters and the key store are shell code in `src/coach/`: no retry loops, one request per press.
 
 ## Conventions
 - Units: degrees, ms since Run start, Sensitivity = cm/360. Yaw > 0 is right, pitch > 0 is up (crosshair pitch is clamped to
@@ -130,13 +130,30 @@ counted Runs than `RunMeta.levels` (pairs are judged after `exclude`, so a Reset
   `points`: per distinct tested Sensitivity, the mean scaled Score with pair offsets and run order taken out, on the same axis as `curve` (the partial residuals).
 - `coefficients`: slopes in x = (ln c - centre) / halfRange, so `range` is x in [-1, 1]; `offsets`: per pair, the scaled Score at the top of the curve at Session start;
   `spread`: the divisor of each Scenario; `counts`: Sessions, pairs, Runs used and Runs excluded by cause.
-- `recommend(fit)` is the seam of #15: today the Curve Peak; the AI Coach's choice inside `fit.interval` replaces it there.
+- `counts.used` is the Runs the fit used (Warm-up Runs, Practice Runs, `exclude`d Runs and incomplete pairs already out, so Reset applies by itself), in id order: the AI Coach payload and its snapshot key read these, not a selection of their own.
+- `recommend(fit, coach?)` is the seam of #15: the AI Coach's choice (`Recommendation`, `source: 'coach'`) when it lies inside `fit.interval`, else the Curve Peak.
 
 Synthetic players (`testing/synthetic.ts`, tests only, also for #11): `syntheticPlayer({ optimum, curvature, noise, trend, form, warmupPenalty, scenarios })` and
 `syntheticRuns(player, sessions, seed)` make `RunSummary`s without the engine. Score = level + scale x (-curvature x ln(c / optimum)^2 + trend x order + form + noise); `form` is one draw
 per (Session, Scenario) pair, `noise` one per Run, all derived from `seed`. A session is `{ levels, scenarios?, abandonAfter?, centre? }`: 2 Warm-up Runs (penalised) then every
 Scenario at every level, shuffled; `abandonAfter: n` keeps only the first n counted Runs while `RunMeta.levels` still says the plan (an incomplete pair). Give a Scenario its own
 `optimum` to make categories disagree. Scenarios that share a curve shape on mirrored levels pool to the exact weighted mean of their optima (see the category weighting tests).
+
+## AI Coach: the Recommended Sensitivity (`coach/sensitivity.ts`, ticket #15)
+`recommendSensitivity({ provider, fit, items, profile, context, language, model, cache })` returns `{ recommended: cm/360 | null, source: 'coach' | 'curve-peak', reasons, notice?, snapshotKey }`. The shell calls it
+only when the player presses the button (never on load). `items` are `AnalysedRun`s; only those in `fit.counts.used` are read. Game Sensitivity and eDPI are never asked: the screen works them out from the cm/360 (`resultView`).
+- **No call** (the Curve Peak, or `recommended: null` without a peak, no `notice`): no provider, no Curve Peak, or no interval (one Session). Then `recommend` is the Curve Peak.
+- **Payload** (`buildSensitivityPayload`, aggregates only: `figuresOf` copies numbers and nothing else, so Aim Movement lists, `input`, `targetEvents` and `env` cannot get in; a test walks the keys at every depth): `units` (what each number is, cm/360 first),
+  the Game Profile (name and weights), Player Context as fixed phrases, the Curve Peak, the interval (rounded inward to 2 decimals, so a copied bound is inside), 13 samples of the Performance Curve and the **levels**. Sessions play different
+  Sensitivities, so the tested range is cut into 9 log-spaced bins; the Runs of a bin, from any Session, are pooled with `groupRuns`, named by their geometric mean cm/360, and empty bins are left out: at most 9 levels, so the size does not grow with the number of Runs.
+  Per level and Scenario: Runs, `scaledScore` (mean Score over `fit.spread`, the fit's own scaling, not adjusted for Session form: the curve is) and Overshoot/Undershoot rates, Path Deviation, Smoothness, accuracy (Clicking) or Ahead/Behind, Time on Target (Tracking).
+- **Player Context** (`coach/context.ts`): role, mousepad, aiming, each one of a few fixed choices or absent. `parsePlayerContext` drops anything else, in the core, so a hand-edited save cannot put text in the prompt. The reply language goes through `cleanLanguage` (one short line).
+- **Request**: `askJson` with `{ recommendedCm360, reasons }`. No `maxItems`/`maxLength` in the schema (structured-output endpoints reject them): reasons are trimmed and bounded after parsing (5, 400 characters), a non-positive number or no reasons is `malformed`.
+- **Guardrail**: an answer outside `[interval.low, interval.high]` is asked again once with a reminder naming the interval; a second miss falls back to the Curve Peak with a `notice`. Refusal, any error and malformed output fall back at once, never retried.
+- **Cache** (`ChoiceCache` port, `createChoiceCache`; the app keeps it in localStorage, `src/coach/choice-cache.ts`, last 5): key = `snapshotKey` = prompt version, Game Profile, the fitted Runs (count and hash of id, Sensitivity, Score: any new Run changes it,
+  a Reset too, a Warm-up Run or an unfinished pair does not), Player Context, language and `model` (the shell's provider + model + endpoint, never the API key). Only an accepted AI Coach answer is cached: a fallback of any kind, a guardrail miss included, is not, so the next press asks again.
+  `cachedRecommendation(...)` reads it without a provider call and without any Analysis: the result screen uses it when it opens, so the same data keeps the same number after a reload.
+- Tests use `testing/fake-provider.ts` (`fakeProvider(...replies)`, records requests) and `testing/analysis.ts` (`analysedSynthetic(runs)`: stand-in Analyses for `syntheticRuns`, with Aim Movement lists a leak would show).
 
 ## Finder phases, Reset and per-category curves (ticket #11)
 - **Next Session** (`finder/next.ts`): `nextSession(fit, fallbackCentre) => { phase, centre, levels, reason }`, pure on the fit, so the Centre needs no stored state. `planSession` gets its
@@ -149,7 +166,7 @@ Scenario at every level, shuffled; `abandonAfter: n` keeps only the first n coun
   - The shell (`src/ui/finder.ts` `newFinderSession(settings, seed, id, next)`, `screens/Finder.tsx`) plans from the fit of `finderRunsFor`, and the result screen shows `nextView(next)`. A Session's levels are never printed.
 - **Reset Finder** (`finder/reset.ts`): the marker is `store.resetFinder(gameProfileId, Date.now())`, one time per Game Profile, kept beside the Runs and **never moved back** (an older marker from an import cannot undo a later reset).
   `finderRunsFor(store, gameProfileId) => { runs, exclude, resetAt }` is the ONE place that applies it: `runs` are all the Game Profile's Finder Runs, `exclude(run)` is `run.startedAt < resetAt` (a Run that starts at the marker counts) for
-  `fitFinder`'s `exclude`, `resetAt` the marker. Anything else that must see the Runs the fit uses (the AI Coach's payload, #15) takes `runs.filter((r) => !exclude(r))`, or passes `resetAt` as `RunFilter.since` to avoid analysing Runs it will drop.
+  `fitFinder`'s `exclude`, `resetAt` the marker. Anything else that must see the Runs the fit uses takes `runs.filter((r) => !exclude(r))`, or passes `resetAt` as `RunFilter.since` to avoid analysing Runs it will drop. The AI Coach's payload and cache key (#15) read `fit.counts.used` instead: that is the same filter, minus the Warm-up Runs and incomplete pairs the fit drops too, so a Reset reaches them with no selection of their own.
   Excluded Runs stay in the store untouched: Analysis, History, Past Runs and exports still have them. A Session cut by the marker loses the pairs it leaves incomplete (see the fit).
   The export file has the optional top-level key `finderResets: { [gameProfileId]: time }` at format version 1 (absent when nothing was reset, and in older files, which import with no resets); `importData` validates it with the Runs
   before any write and merges it with the later time winning. The IndexedDB adapter keeps them in a third object store (database version 2).

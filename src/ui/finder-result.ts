@@ -1,10 +1,12 @@
 import { ENOUGH_HALF_WIDTH, eDpi, FINE_HALF_WIDTH, FINE_SPREAD, gameSensitivityFor, getGameProfile, recommend } from '../core'
-import type { FinderFit, GameProfileId, NextSession, ScenarioCategory } from '../core'
+import type { FinderFit, GameProfileId, NextSession, Recommendation, ScenarioCategory } from '../core'
 import { fmt } from './format'
 
 export interface ResultView {
   /** The Recommended Sensitivity in the three forms a player types somewhere. Game Sensitivity and eDPI are always by formula from cm/360. */
   recommended: { cm360: number; gameSensitivity: number; eDpi: number } | null
+  /** Who chose `recommended`: the AI Coach (inside the interval), or the Curve Peak itself. */
+  source: 'coach' | 'curve-peak'
   /** The Game Profile's remark about typing its Game Sensitivity (a menu value, whole numbers only, ...). */
   note: string | undefined
   /** The interval is narrower than ±10%. */
@@ -17,9 +19,12 @@ const sessions = (n: number): string => `${n} Session${n === 1 ? '' : 's'}`
 // One decimal, rounded down: 0.0996 is "9.9%", never "10%" next to a claim that the interval is narrower than 10%.
 const percent = (halfWidth: number): string => `${(Math.floor(halfWidth * 1000) / 10).toFixed(1)}%`
 
-/** What the result screen says about a fit, for one Game Profile at the player's DPI. Pure: no Run's Sensitivity but the curve's own is in it. */
-export function resultView(fit: FinderFit, gameProfileId: GameProfileId, dpi: number): ResultView {
-  const cm360 = recommend(fit)
+/**
+ * What the result screen says about a fit, for one Game Profile at the player's DPI. Pure: no Run's Sensitivity but the curve's own is in it.
+ * `coach` is the AI Coach's answer when there is one (see `recommendSensitivity`); one outside the interval is ignored.
+ */
+export function resultView(fit: FinderFit, gameProfileId: GameProfileId, dpi: number, coach?: Pick<Recommendation, 'source' | 'recommended'> | null): ResultView {
+  const cm360 = recommend(fit, coach)
   const profile = getGameProfile(gameProfileId)
   const gameSensitivity = cm360 === null ? null : gameSensitivityFor(gameProfileId, cm360, dpi)
   const recommended = cm360 === null || gameSensitivity === null ? null : { cm360, gameSensitivity, eDpi: eDpi(gameSensitivity, dpi) }
@@ -46,7 +51,8 @@ export function resultView(fit: FinderFit, gameProfileId: GameProfileId, dpi: nu
       ? `Enough data: your Curve Peak is known to within ±${percent(interval.halfWidth)}. You can stop here, or keep playing Sessions to narrow it further.`
       : `${sessions(counts.sessions)} so far. The interval is ±${percent(interval.halfWidth)} wide; there is enough data once it is narrower than ±${limit}.`
   })()
-  return { recommended, note: profile.note, enough: fit.enoughData, message }
+  const source = recommended !== null && coach?.source === 'coach' && cm360 === coach.recommended ? 'coach' : 'curve-peak'
+  return { recommended, source, note: profile.note, enough: fit.enoughData, message }
 }
 
 /**

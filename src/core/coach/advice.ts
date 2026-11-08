@@ -14,14 +14,14 @@ const SCORE_UNIT: Record<ScenarioId, string> = {
   switch: 'number of targets eliminated',
 }
 
-type Figures = { [key: string]: number | Figures }
+export type Figures = { [key: string]: number | Figures }
 
 /**
  * Only the numbers of a pooled `Metrics` object, nested objects of numbers included, nothing else. Whatever a metric is
  * named, an array (such as a list of Aim Movements) or any other value cannot get into the payload this way, so the
  * "aggregates only, never raw mouse data" rule holds by construction, also for metrics added later.
  */
-function figuresOf(source: object): Figures {
+export function figuresOf(source: object): Figures {
   const out: Figures = {}
   for (const [key, value] of Object.entries(source)) {
     if (typeof value === 'number' && Number.isFinite(value)) out[key] = Math.round(value * 1000) / 1000
@@ -69,7 +69,7 @@ export function buildAdvicePayload(items: readonly AnalysedRun[]): AdvicePayload
 }
 
 /** A free-text language comes from the player: one short line, so it cannot carry instructions of its own. */
-const cleanLanguage = (language: string): string => language.replace(/\s+/g, ' ').trim().slice(0, 40) || 'English'
+export const cleanLanguage = (language: string): string => language.replace(/\s+/g, ' ').trim().slice(0, 40) || 'English'
 
 const system = (language: string) => `You are the AI Coach of BetterAim, a mouse aim trainer. A player has just finished a Practice Session. Write training advice for them from the figures you are given.
 

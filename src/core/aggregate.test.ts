@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aimDelta, aggregateRuns, analyseRun, byDay, bySession, createMemoryStore, leadOf, loadAnalysed, tallyShots } from './index'
+import { aimDelta, aggregateRuns, analyseRun, byDay, bySession, createMemoryStore, leadOf, loadAnalysed, loadAnalysedRuns, tallyShots } from './index'
 import type { AnalysedRun, ClickingAnalysis, Metrics, TrackingAnalysis } from './index'
 import { aimBot, missBot, trackBot } from './testing/bots'
 import type { Bot } from './testing/bots'
@@ -18,6 +18,37 @@ const tracking = (a: AnalysedRun['analysis'] | Metrics): TrackingAnalysis => {
 // A clean Run and a sloppy one: different shots, hits and Aim Movement counts, so pooling and averaging disagree.
 const clean = () => testRecord({ seed: 1 }, { id: 'clean', startedAt: 0 })
 const sloppy = () => testRecord({ seed: 2 }, { id: 'sloppy', startedAt: HOUR }, missBot(aimBot({ gain: 1.3 }), 2))
+
+describe('analysing the Runs that were picked', () => {
+  it('analyses only those Runs, reports progress after each, and reuses the cache', async () => {
+    const store = createMemoryStore()
+    await store.save([clean(), sloppy(), testRecord({ seed: 3 }, { id: 'third', startedAt: 2 * HOUR })])
+    const picked = (await store.list()).filter((r) => r.id !== 'sloppy')
+    let fetched = 0
+    const counting = { ...store, get: (id: string) => (fetched++, store.get(id)) }
+    const cache = new Map()
+    const progress: [number, number][] = []
+    const items = await loadAnalysedRuns(counting, picked, cache, (done, total) => void progress.push([done, total]))
+    expect(items.map((i) => i.run.id)).toEqual(['clean', 'third'])
+    expect(progress).toEqual([[1, 2], [2, 2]])
+    expect(fetched).toBe(2)
+    await loadAnalysedRuns(counting, picked, cache)
+    expect(fetched).toBe(2) // nothing is analysed twice
+    expect(items[0]!.analysis).toEqual(analyseRun(clean()))
+  })
+
+  it('waits for a progress callback that returns a promise, so a screen can let the browser breathe between Runs', async () => {
+    const store = createMemoryStore()
+    await store.save([clean(), sloppy()])
+    const order: string[] = []
+    await loadAnalysedRuns(store, await store.list(), new Map(), async (done) => {
+      order.push(`start ${done}`)
+      await Promise.resolve()
+      order.push(`end ${done}`)
+    })
+    expect(order).toEqual(['start 1', 'end 1', 'start 2', 'end 2'])
+  })
+})
 
 describe('aggregating Runs from the store', () => {
   it('pools the metrics of a Scenario from counts, not by averaging rates', async () => {

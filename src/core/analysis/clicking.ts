@@ -19,6 +19,18 @@ function crosshairPath(run: RunData): { t: number; aim: Aim }[] {
   return path
 }
 
+/** Index of the first sample later than `t` (the path is in time order): a Run has many Aim Movements and tens of thousands of samples. */
+function firstAfter(path: readonly { t: number }[], t: number): number {
+  let lo = 0
+  let hi = path.length
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (path[mid]!.t > t) hi = mid
+    else lo = mid + 1
+  }
+  return lo
+}
+
 /**
  * The Ideal Path is the great circle from `from` to `to`. Returns where a view direction is on it: `along` is the
  * angle from `from` in the direction of `to`, `across` the signed perpendicular angle from the circle. Null when the
@@ -51,10 +63,9 @@ export function analyseClicking(run: RunData): ClickingAnalysis {
 
     // Samples of the Aim Movement: the crosshair at target appearance, then after every move up to the hit.
     // A move at the very ms of the hit counts as part of this movement.
-    const samples = [{ t: e.t, aim: e.crosshair }, ...path.filter((s) => s.t > e.t && s.t <= endMs)].map((s) => ({
-      ms: s.t - e.t,
-      ...locate(s.aim),
-    }))
+    const inMovement: { t: number; aim: Aim }[] = [{ t: e.t, aim: e.crosshair }]
+    for (let i = firstAfter(path, e.t); i < path.length && path[i]!.t <= endMs; i++) inMovement.push(path[i]!)
+    const samples = inMovement.map((s) => ({ ms: s.t - e.t, ...locate(s.aim) }))
     const bins = Math.ceil(endMs - e.t) + 1
     const along = new Array<number>(bins).fill(0)
     const across = new Array<number>(bins).fill(0)

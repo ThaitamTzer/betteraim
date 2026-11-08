@@ -3,8 +3,11 @@ import { cm360For, eDpi, getGameProfile } from '../../core'
 import type { GameProfileId } from '../../core'
 import { GameSelect, NumberField } from '../fields'
 import { fmt } from '../format'
+import { loadPlayerContext, savePlayerContext } from '../player-context'
+import { PlayerContextFields } from '../PlayerContextFields'
 import type { ScreenProps } from '../routes'
 import { loadSettings, saveSettings, validSetup } from '../settings'
+import '../coach.css'
 
 /** First visit (and "Change setup"): pick the game, then enter its Game Sensitivity and your DPI, or keep the default. */
 export function Onboarding({ go }: ScreenProps<'onboarding'>) {
@@ -12,6 +15,7 @@ export function Onboarding({ go }: ScreenProps<'onboarding'>) {
   const [game, setGame] = useState<GameProfileId>(saved?.gameProfileId ?? 'valorant')
   const [sens, setSens] = useState(String(saved?.gameSensitivity ?? getGameProfile(game).defaultSensitivity))
   const [dpi, setDpi] = useState(String(saved?.dpi ?? 800))
+  const [context, setContext] = useState(loadPlayerContext)
   const profile = getGameProfile(game)
   const gameSensitivity = Number(sens)
   const mouseDpi = Number(dpi)
@@ -31,6 +35,7 @@ export function Onboarding({ go }: ScreenProps<'onboarding'>) {
           e.preventDefault()
           if (!valid) return
           saveSettings({ gameProfileId: game, gameSensitivity, dpi: mouseDpi })
+          savePlayerContext(context)
           go({ name: 'home' })
         }}
       >
@@ -53,6 +58,13 @@ export function Onboarding({ go }: ScreenProps<'onboarding'>) {
             ? `That is ${fmt(cm360For(game, gameSensitivity, mouseDpi))} cm/360 (eDPI ${fmt(eDpi(gameSensitivity, mouseDpi))}).`
             : 'Enter a DPI from 100 to 32000 and a Game Sensitivity that works out to between 0.1 and 1000 cm/360.'}
         </p>
+        <details className="optional">
+          <summary>Player Context (optional)</summary>
+          <PlayerContextFields value={context} onChange={setContext} />
+          <p className="hint">
+            If you connect an AI Coach later, it reads these when it chooses your Recommended Sensitivity. Skip them or change them any time in Options.
+          </p>
+        </details>
         <div className="actions">
           <button type="submit" className="primary" disabled={!valid}>
             {saved ? 'Save' : 'Continue'}

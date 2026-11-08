@@ -64,3 +64,34 @@
 .advice .warning {
   overflow-wrap: anywhere;
 }
+
+/* The Finder result's AI Coach: reasons as a list, and room above the button */
+.coach-answer ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.coach-ask {
+  margin-top: 1rem;
+}
+
+/* Player Context in onboarding: one collapsed block, so setup stays short */
+details.optional {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+details.optional summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+details.optional[open] summary {
+  margin-bottom: 0.75rem;
+}
+
+details.optional label + label,
+details.optional .hint {
+  margin-top: 0.75rem;
+}

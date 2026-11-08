@@ -3,12 +3,14 @@ import { finderRunsFor, fitCategories, fitFinder, getGameProfile, INTERVAL_LEVEL
 import type { FinderFit, NextSession, ScenarioCategory } from '../../core'
 import { runStore, saveOutcome } from '../../storage/runs'
 import { Chart } from '../Chart'
+import { CoachPanel } from '../CoachPanel'
 import { centreOf } from '../finder'
 import { categoriesView, categoryRows, chartRows, nextView, resultView } from '../finder-result'
 import { fmt } from '../format'
 import { loadPreferences } from '../preferences'
 import type { ScreenProps } from '../routes'
 import { loadSettings } from '../settings'
+import { useCoachChoice } from '../useCoachChoice'
 import '../summary.css'
 import '../finder-result.css'
 
@@ -64,8 +66,11 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
     }
   }
 
-  const view = useMemo(() => (loaded && 'fit' in loaded ? resultView(loaded.fit, gameProfileId, dpi) : null), [loaded, gameProfileId, dpi])
+  // The AI Coach's choice (cached from earlier, or asked for with the button) replaces the Curve Peak as the Recommended Sensitivity.
+  const coach = useCoachChoice(loaded && 'fit' in loaded ? loaded.fit : null, gameProfileId)
+  const view = useMemo(() => (loaded && 'fit' in loaded ? resultView(loaded.fit, gameProfileId, dpi, coach.choice) : null), [loaded, gameProfileId, dpi, coach.choice])
   const recommended = view?.recommended ?? null
+  const coachPick = view?.source === 'coach' ? (recommended?.cm360 ?? null) : null
   // Chart props are rebuilt only when the fit changes: the chart is redrawn on any new prop.
   const chart = useMemo(() => {
     if (!loaded || 'error' in loaded || loaded.fit.curve.sensitivity.length === 0) return null
@@ -78,11 +83,14 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
         { label: 'Performance Curve', values: rows.curve },
         { label: 'Your Runs', values: rows.points, dots: true },
       ],
-      markers: fit.peak === null ? [] : [{ x: fit.peak, label: 'Curve Peak' }],
+      markers: [
+        ...(fit.peak === null ? [] : [{ x: fit.peak, label: 'Curve Peak' }]),
+        ...(coachPick === null ? [] : [{ x: coachPick, label: 'AI Coach', tone: 'on-target' as const }]),
+      ],
       bands: fit.interval ? [{ from: fit.interval.low, to: fit.interval.high }] : [],
-      description: `Performance Curve: Score against Sensitivity in cm/360${fit.peak === null ? ', with no interior peak' : `, highest at ${fmt(fit.peak)} cm/360${bounds}`}`,
+      description: `Performance Curve: Score against Sensitivity in cm/360${fit.peak === null ? ', with no interior peak' : `, highest at ${fmt(fit.peak)} cm/360${bounds}`}${coachPick === null ? '' : `; the AI Coach chose ${fmt(coachPick)} cm/360`}`,
     }
-  }, [loaded])
+  }, [loaded, coachPick])
   // The Clicking and Tracking curves on their own chart (#11); null until some Run has been fitted.
   const byCategory = useMemo(() => {
     if (!loaded || 'error' in loaded || loaded.fit.counts.runs === 0) return null
@@ -179,6 +187,7 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
           <p className="hint">
             Game Sensitivity and eDPI are worked out from the cm/360 at {dpi} DPI.{view.note ? ` ${view.note}` : ''}
           </p>
+          {view.source === 'coach' && <p className="hint">Chosen by the AI Coach inside the interval. The Curve Peak is marked on the chart too.</p>}
           {fit.interval && (
             <p className="hint">
               Curve Peak {fmt(fit.peak!)} cm/360, {Math.round(INTERVAL_LEVEL * 100)}% interval {fmt(fit.interval.low)} to {fmt(fit.interval.high)} cm/360.
@@ -186,6 +195,8 @@ export function FinderResult({ route, go }: ScreenProps<'finderResult'>) {
           )}
         </>
       )}
+
+      <CoachPanel fit={fit} coach={coach} onSetup={() => go({ name: 'options' })} />
 
       {chart && (
         <section className="chart-block">
